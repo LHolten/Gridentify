@@ -6,12 +6,18 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
 [lib]
 name = "gridentify"
 crate-type = ["cdylib"]
 
 [dependencies]
 array-init = "0.1.1"
+rand = "0.7.3"
+serde_json = "1.0.44"
 
 [dependencies.pyo3]
 version = "0.8.5"

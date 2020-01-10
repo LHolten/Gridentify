@@ -1,4 +1,4 @@
-mod grid;
+pub mod grid;
 
 use crate::grid::{Action, Gridentify};
 use pyo3::prelude::*;

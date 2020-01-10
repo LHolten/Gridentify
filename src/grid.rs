@@ -7,12 +7,12 @@ pub type Action = Vec<usize>;
 #[derive(Copy, Clone)]
 pub struct Gridentify {
     seed: u64,
-    pub(crate) score: u64,
-    pub(crate) board: Board,
+    pub score: u64,
+    pub board: Board,
 }
 
 impl Gridentify {
-    pub(crate) fn new(mut seed: u64) -> Gridentify {
+    pub fn new(mut seed: u64) -> Gridentify {
         Gridentify {
             seed,
             score: 0,
@@ -30,7 +30,7 @@ impl Gridentify {
         ((e % 3) + 1) as u32
     }
 
-    pub(crate) fn valid_moves(&self) -> Vec<Action> {
+    pub fn valid_moves(&self) -> Vec<Action> {
         let neighbours_of = self.get_neighbours_of();
         let mut moves = Vec::new();
 
@@ -40,7 +40,7 @@ impl Gridentify {
         moves
     }
 
-    pub(crate) fn make_move(&mut self, action: Action) {
+    pub fn make_move(&mut self, action: Action) {
         self.board[*action.last().unwrap()] *= action.len() as u32;
         for &tile in action[..action.len() - 1].iter() {
             self.board[tile] = Gridentify::new_num(&mut self.seed);
@@ -49,7 +49,7 @@ impl Gridentify {
         self.score += self.board[*action.last().unwrap()] as u64;
     }
 
-    pub(crate) fn get_neighbours_of(&self) -> [Vec<usize>; 25] {
+    pub fn get_neighbours_of(&self) -> [Vec<usize>; 25] {
         array_init::array_init(|i| {
             let value = self.board[i];
             let mut neighbours = Vec::new();
@@ -85,14 +85,14 @@ impl Gridentify {
         }
     }
 
-    pub(crate) fn show_board(&self) {
+    pub fn show_board(&self) {
         for i in 0..5 {
             println!("{:?}", &self.board[i * 5..i * 5 + 5]);
         }
     }
 }
 
-pub(crate) fn show_move(action: Action) {
+pub fn show_move(action: Action) {
     let mut board = [0; 25];
     for (order, tile) in action.iter().enumerate() {
         board[*tile] = order + 1;
