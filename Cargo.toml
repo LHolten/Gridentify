@@ -1,0 +1,18 @@
+[package]
+name = "gridentify"
+version = "0.1.0"
+authors = ["Hytak <lhc.holten@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "gridentify"
+crate-type = ["cdylib"]
+
+[dependencies]
+array-init = "0.1.1"
+
+[dependencies.pyo3]
+version = "0.8.5"
+features = ["extension-module"]
