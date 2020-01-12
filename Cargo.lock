@@ -67,6 +67,7 @@ dependencies = [
  "array-init 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

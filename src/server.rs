@@ -1,15 +1,13 @@
+use crate::connection;
+use crate::grid::{Action, Gridentify};
+use crate::local::LocalGridentify;
 use rand::Rng;
 use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
-mod grid;
-
-use crate::grid::Action;
-use grid::Gridentify;
-
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:80").unwrap();
+pub(crate) fn start_server() {
+    let listener = TcpListener::bind("127.0.0.1:32123").unwrap();
 
     for stream in listener.incoming() {
         match stream {
@@ -23,34 +21,32 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
+    stream.set_nodelay(true).unwrap();
+
     let mut data = Vec::new();
-    BufReader::new(&stream).read_until(b'\n', &mut data)?;
 
-    let nickname: String = serde_json::from_slice(data.as_slice())?;
+    let nickname: String = connection::receive(&mut data, &mut stream)?;
+    println!("{:?}", nickname.len());
 
-    let mut grid = Gridentify::new(rand::thread_rng().gen());
+    let mut grid = LocalGridentify::new(rand::thread_rng().gen::<u32>() as u64);
 
     loop {
-        stream.write(serde_json::to_vec(&grid.board)?.as_slice())?;
+        connection::send(&grid.board(), &mut stream)?;
 
-        let moves = grid.valid_moves();
-        if moves.len() == 0 {
-            return Ok(handle_high_score(&nickname, grid.score));
+        if grid.is_game_over() {
+            return Ok(handle_high_score(&nickname, grid.score()));
         }
 
-        data.clear();
-        BufReader::new(&stream).read_until(b'\n', &mut data)?;
+        let action: Action = connection::receive(&mut data, &mut stream)?;
 
-        let action: Action = serde_json::from_slice(data.as_slice())?;
-
-        if !moves.contains(&action) {
-            return Err(Error::new(ErrorKind::Other, "wrong move"));
+        if grid.validate_move(&action).is_err() {
+            return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
         }
 
         grid.make_move(action)
     }
 }
 
-fn handle_high_score(name: &str, score: u64) {
+fn handle_high_score(name: &str, score: &u64) {
     println!("{:?} got {:?}", name, score);
 }
