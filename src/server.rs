@@ -4,6 +4,7 @@ use crate::local::LocalGridentify;
 use rand::Rng;
 use rusqlite::{params, Connection};
 use std::io::{Error, ErrorKind};
+use std::iter::FromIterator;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
@@ -20,6 +21,8 @@ pub(crate) fn main() {
     .unwrap();
     drop(conn);
 
+    thread::spawn(score_server);
+
     let listener = TcpListener::bind("localhost:32123").unwrap();
 
     for stream in listener.incoming() {
@@ -31,6 +34,40 @@ pub(crate) fn main() {
             Err(_) => {}
         }
     }
+}
+
+fn score_server() {
+    let listener = TcpListener::bind("localhost:12321").unwrap();
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("new score client!");
+                thread::spawn(|| handle_connection_score(stream));
+            }
+            Err(_) => {}
+        }
+    }
+}
+
+fn handle_connection_score(mut stream: TcpStream) -> Result<(), Error> {
+    stream.set_nodelay(true).unwrap();
+
+    let conn = Connection::open("./scores.db").unwrap();
+    let mut stmt = conn
+        .prepare("SELECT name, score FROM scores ORDER BY score DESC LIMIT 10")
+        .unwrap();
+
+    let score_iter = stmt
+        .query_map(params![], |row| Ok((row.get(0)?, row.get(1)?)))
+        .unwrap();
+
+    let mut scores: Vec<(String, u32)> = Vec::new();
+    for score in score_iter {
+        scores.push(score.unwrap());
+    }
+
+    connection::send(&scores, &mut stream)
 }
 
 fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {

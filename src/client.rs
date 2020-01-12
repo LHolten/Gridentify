@@ -49,3 +49,10 @@ impl Gridentify for ClientGridentify {
         self.score += self.board[*action.last().unwrap()] as u64;
     }
 }
+
+pub fn get_scores(host: &str) -> Vec<(String, u32)> {
+    let mut stream = TcpStream::connect(host).unwrap();
+    stream.set_nodelay(true).unwrap();
+
+    connection::receive(&mut stream).unwrap()
+}

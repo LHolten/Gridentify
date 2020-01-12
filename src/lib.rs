@@ -2,7 +2,6 @@ pub mod client;
 pub mod connection;
 pub mod grid;
 pub mod local;
-pub mod server;
 
 use crate::client::ClientGridentify;
 use crate::grid::{Action, Gridentify};
@@ -117,6 +116,12 @@ pub fn gridentify(_py: Python, m: &PyModule) -> PyResult<()> {
     #[text_signature = "(action)"]
     fn show_move(_py: Python, action: Action) -> PyResult<()> {
         Ok(grid::show_move(action))
+    }
+
+    #[pyfn(m, "server_scores")]
+    #[text_signature = "(action)"]
+    fn server_scores(_py: Python, host: &str) -> PyResult<Vec<(String, u32)>> {
+        Ok(client::get_scores(host))
     }
 
     m.add_class::<PyLocalGridentify>()?;
