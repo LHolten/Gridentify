@@ -9,12 +9,15 @@ use crate::grid::Gridentify;
 use std::thread;
 
 fn main() {
-    thread::spawn(server::start_server);
-    let mut grid = ClientGridentify::new("localhost:32123", "hytak");
+    let handle = thread::spawn(server::main);
+    let mut grid = ClientGridentify::new("localhost:32123", "hyta k");
 
     while !grid.is_game_over() {
         let actions = grid.valid_moves();
         let action = actions.first().unwrap();
         grid.make_move(action.clone());
     }
+
+    handle.join();
+    //    server::main();
 }

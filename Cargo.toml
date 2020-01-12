@@ -6,9 +6,9 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-#[lib]
-#name = "gridentify"
-#crate-type = ["cdylib"]
+[lib]
+name = "gridentify"
+crate-type = ["cdylib"]
 
 [dependencies]
 array-init = "0.1.1"
@@ -19,3 +19,7 @@ serde = "1.0.104"
 [dependencies.pyo3]
 version = "0.8.5"
 features = ["extension-module"]
+
+[dependencies.rusqlite]
+version = "0.21.0"
+features = ["bundled"]

@@ -2,12 +2,25 @@ use crate::connection;
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use rand::Rng;
+use rusqlite::{params, Connection};
 use std::io::{Error, ErrorKind};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
-pub(crate) fn start_server() {
-    let listener = TcpListener::bind("127.0.0.1:32123").unwrap();
+pub(crate) fn main() {
+    let conn = Connection::open("scores.db").unwrap();
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS scores (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name        TEXT NOT NULL,
+                    score       UNSIGNED BIG INT NOT NULL
+                    )",
+        params![],
+    )
+    .unwrap();
+    drop(conn);
+
+    let listener = TcpListener::bind("localhost:32123").unwrap();
 
     for stream in listener.incoming() {
         match stream {
@@ -46,5 +59,12 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
 }
 
 fn handle_high_score(name: &str, score: &u64) {
+    let conn = Connection::open("./scores.db").unwrap();
+    conn.execute(
+        "INSERT INTO scores (name, score) VALUES (?1, ?2)",
+        params![name, *score as u32],
+    )
+    .unwrap();
+
     println!("{:?} got {:?}", name, score);
 }
