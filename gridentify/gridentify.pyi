@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Tuple
 
+# get the highscore list from a server
+def server_scores(host: str) -> List[Tuple[str, int]]: ...
 # print a representation of a move to stdout
 def show_move(move: List[int]) -> None: ...
 
