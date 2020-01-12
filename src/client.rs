@@ -6,7 +6,6 @@ pub struct ClientGridentify {
     stream: TcpStream,
     score: u64,
     board: Board,
-    data: Vec<u8>,
 }
 
 impl ClientGridentify {
@@ -14,18 +13,13 @@ impl ClientGridentify {
         let mut stream = TcpStream::connect(host).unwrap();
         stream.set_nodelay(true).unwrap();
 
-        let mut data = Vec::new();
-
         connection::send(&nickname, &mut stream).unwrap();
-        let board = connection::receive(&mut data, &mut stream).unwrap();
-
-        println!("{:?}", board);
+        let board = connection::receive(&mut stream).unwrap();
 
         Self {
             stream,
             score: 0,
             board,
-            data,
         }
     }
 }
@@ -48,14 +42,9 @@ impl Gridentify for ClientGridentify {
     }
 
     fn make_move(&mut self, action: Action) {
-        connection::send(&action, &mut self.stream);
+        connection::send(&action, &mut self.stream).unwrap();
 
-        self.board_mut()[*action.last().unwrap()] *= action.len() as u32;
-
-        let numbers = connection::receive::<Vec<u32>>(&mut self.data, &mut self.stream).unwrap();
-        for (tile, value) in action[..action.len() - 1].iter().zip(numbers.iter()) {
-            self.board[*tile] = *value;
-        }
+        self.board = connection::receive(&mut self.stream).unwrap();
 
         self.score += self.board[*action.last().unwrap()] as u64;
     }

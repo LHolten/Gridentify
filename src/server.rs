@@ -2,7 +2,7 @@ use crate::connection;
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use rand::Rng;
-use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
+use std::io::{Error, ErrorKind};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
@@ -23,10 +23,8 @@ pub(crate) fn start_server() {
 fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
     stream.set_nodelay(true).unwrap();
 
-    let mut data = Vec::new();
-
-    let nickname: String = connection::receive(&mut data, &mut stream)?;
-    println!("{:?}", nickname.len());
+    let nickname: String = connection::receive(&mut stream)?;
+    println!("{:?}", nickname);
 
     let mut grid = LocalGridentify::new(rand::thread_rng().gen::<u32>() as u64);
 
@@ -37,7 +35,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
             return Ok(handle_high_score(&nickname, grid.score()));
         }
 
-        let action: Action = connection::receive(&mut data, &mut stream)?;
+        let action: Action = connection::receive(&mut stream)?;
 
         if grid.validate_move(&action).is_err() {
             return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
