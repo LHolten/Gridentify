@@ -11,7 +11,13 @@ pub(crate) fn send<T: Serialize>(data: &T, stream: &mut TcpStream) -> Result<(),
 
 pub(crate) fn receive<T: for<'a> Deserialize<'a>>(stream: &mut TcpStream) -> Result<T, Error> {
     let mut data = Vec::new();
-    BufReader::new(stream).read_until(0, &mut data)?;
+    let num_bytes = BufReader::new(stream).read_until(0, &mut data)?;
+    if num_bytes == 0 {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "couldn\'t deserialize data",
+        ));
+    }
     data.pop().unwrap();
     serde_json::from_slice(data.as_slice()).or(Err(Error::new(
         ErrorKind::InvalidData,

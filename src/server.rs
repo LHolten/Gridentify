@@ -4,7 +4,6 @@ use crate::local::LocalGridentify;
 use rand::Rng;
 use rusqlite::{params, Connection};
 use std::io::{Error, ErrorKind};
-use std::iter::FromIterator;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
@@ -23,7 +22,7 @@ pub(crate) fn main() {
 
     thread::spawn(score_server);
 
-    let listener = TcpListener::bind("localhost:32123").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:32123").unwrap();
 
     for stream in listener.incoming() {
         match stream {
@@ -37,7 +36,7 @@ pub(crate) fn main() {
 }
 
 fn score_server() {
-    let listener = TcpListener::bind("localhost:12321").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:12321").unwrap();
 
     for stream in listener.incoming() {
         match stream {
