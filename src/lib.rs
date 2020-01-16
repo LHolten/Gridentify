@@ -7,14 +7,13 @@ mod random;
 use crate::client::ClientGridentify;
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
-use crate::random::BadRandom;
 use pyo3::prelude::*;
 
 #[pyclass(name = Gridentify)]
 #[text_signature = "(cls, seed)"]
 #[derive(Copy, Clone)]
 struct PyLocalGridentify {
-    rust: LocalGridentify<BadRandom>,
+    rust: LocalGridentify<u64>,
 }
 
 #[pyclass(name = GridentifyClient)]

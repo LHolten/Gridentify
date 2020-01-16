@@ -9,9 +9,7 @@ pub(crate) trait Random {
     fn new_num(&mut self) -> u32;
 }
 
-pub(crate) type BadRandom = u64;
-
-impl Random for BadRandom {
+impl Random for u64 {
     fn new_num(&mut self) -> u32 {
         let e = (16807 * *self) % 1924421567;
         *self = if e > 0 { e } else { e + 3229763266 };
@@ -19,9 +17,7 @@ impl Random for BadRandom {
     }
 }
 
-pub(crate) type GoodRandom = ThreadRng;
-
-impl Random for GoodRandom {
+impl Random for ThreadRng {
     fn new_num(&mut self) -> u32 {
         (self.next_u32() % 3) + 1
     }
