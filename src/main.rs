@@ -13,9 +13,6 @@ fn main() {
 
     thread::spawn(|| listen_port("0.0.0.0:32123", handle_connection));
     thread::spawn(|| listen_port("0.0.0.0:12321", handle_connection_score));
-    thread::spawn(|| listen_port("localhost:21212", web_socket_wrapper(handle_connection)));
-    listen_port(
-        "localhost:12121",
-        web_socket_wrapper(handle_connection_score),
-    );
+    thread::spawn(|| listen_port("0.0.0.0:21212", web_socket_wrapper(handle_connection)));
+    listen_port("0.0.0.0:12121", web_socket_wrapper(handle_connection_score));
 }

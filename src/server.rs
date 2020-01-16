@@ -3,12 +3,12 @@ use crate::database::{get_high_scores, insert_high_score};
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use rand::Rng;
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Result};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use tungstenite::{accept, WebSocket};
 
-pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Result<(), Error> {
+pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Result<()> {
     stream.set_nodelay(true).unwrap();
 
     let scores = get_high_scores();
@@ -16,7 +16,7 @@ pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Resul
     stream.send(&scores)
 }
 
-pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<(), Error> {
+pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> {
     stream.set_nodelay(true).unwrap();
 
     let nickname: String = stream.receive()?;
@@ -42,17 +42,20 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<(), 
 }
 
 pub(crate) fn web_socket_wrapper(
-    func: impl FnOnce(WebSocket<TcpStream>) -> Result<(), Error> + Copy + 'static,
-) -> impl FnOnce(TcpStream) -> Result<(), Error> + Copy + 'static {
+    func: impl FnOnce(WebSocket<TcpStream>) -> Result<()> + Copy + 'static,
+) -> impl FnOnce(TcpStream) -> Result<()> + Copy + 'static {
     move |stream: TcpStream| {
-        let web_socket = accept(stream).unwrap();
+        let web_socket = accept(stream).or(Err(Error::new(
+            ErrorKind::ConnectionRefused,
+            "could not connect",
+        )))?;
         func(web_socket)
     }
 }
 
 pub(crate) fn listen_port(
     port: &str,
-    handler: impl FnOnce(TcpStream) -> Result<(), Error> + Send + 'static + Copy + Sync,
+    handler: impl FnOnce(TcpStream) -> Result<()> + Send + 'static + Copy + Sync,
 ) {
     let listener = TcpListener::bind(port).unwrap();
 
