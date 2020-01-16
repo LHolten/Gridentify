@@ -10,6 +10,7 @@ edition = "2018"
 lto = true
 
 [lib]
+path = 'src\py_lib.rs'
 name = "gridentify"
 crate-type = ["cdylib"]
 
