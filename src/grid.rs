@@ -13,7 +13,7 @@ pub enum ActionValidation {
 #[derive(Copy, Clone)]
 pub struct State {
     pub(crate) board: Board,
-    pub(crate) score: u64,
+    pub(crate) score: u32,
 }
 
 impl State {

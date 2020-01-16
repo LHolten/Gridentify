@@ -1,10 +1,12 @@
 mod client;
 mod connection;
+mod database;
 mod grid;
 mod local;
 mod random;
 
 use crate::client::ClientGridentify;
+use crate::database::Score;
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use pyo3::prelude::*;
@@ -59,7 +61,7 @@ impl PyLocalGridentify {
     }
 
     #[getter]
-    fn score(&self) -> PyResult<u64> {
+    fn score(&self) -> PyResult<u32> {
         Ok(self.rust.state.score)
     }
 
@@ -101,7 +103,7 @@ impl PyClientGridentify {
     }
 
     #[getter]
-    fn score(&self) -> PyResult<u64> {
+    fn score(&self) -> PyResult<u32> {
         Ok(self.rust.state.score)
     }
 
@@ -121,7 +123,7 @@ pub fn gridentify(_py: Python, m: &PyModule) -> PyResult<()> {
 
     #[pyfn(m, "server_scores")]
     #[text_signature = "(action)"]
-    fn server_scores(_py: Python, host: &str) -> PyResult<Vec<(String, u32)>> {
+    fn server_scores(_py: Python, host: &str) -> PyResult<Vec<Score>> {
         Ok(client::get_scores(host))
     }
 

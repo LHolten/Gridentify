@@ -18,8 +18,12 @@ crate-type = ["cdylib"]
 array-init = "0.1.1"
 rand = "0.7.3"
 serde_json = "1.0.44"
-serde = "1.0.104"
 tungstenite = "0.9.2"
+dict_derive = "0.2.0"
+
+[dependencies.serde]
+version = "1.0.104"
+features = ["derive"]
 
 [dependencies.pyo3]
 version = "0.8.5"

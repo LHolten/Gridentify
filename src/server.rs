@@ -1,5 +1,5 @@
 use crate::connection::JsonConnection;
-use crate::database::{get_high_scores, insert_high_score};
+use crate::database::{get_high_scores, insert_high_score, Score};
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use std::io::{Error, ErrorKind, Result};
@@ -27,7 +27,10 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
         stream.send(&grid.state.board)?;
 
         if grid.state.is_game_over() {
-            return Ok(insert_high_score(&nickname, grid.state.score));
+            return Ok(insert_high_score(Score {
+                name: nickname,
+                score: grid.state.score,
+            }));
         }
 
         let action: Action = stream.receive()?;

@@ -26,6 +26,6 @@ impl<R: Random> Gridentify for LocalGridentify<R> {
             self.state.board[tile] = self.random.new_num();
         }
 
-        self.state.score += self.state.board[*action.last().unwrap()] as u64;
+        self.state.score += self.state.board[*action.last().unwrap()];
     }
 }
