@@ -1,90 +1,37 @@
-use crate::connection;
+use crate::connection::JsonConnection;
+use crate::database::{get_high_scores, insert_high_score};
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
 use rand::Rng;
-use rusqlite::{params, Connection};
 use std::io::{Error, ErrorKind};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
+use tungstenite::{accept, WebSocket};
 
-pub(crate) fn main() {
-    let conn = Connection::open("scores.db").unwrap();
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS scores (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name        TEXT NOT NULL,
-                    score       UNSIGNED BIG INT NOT NULL
-                    )",
-        params![],
-    )
-    .unwrap();
-    drop(conn);
-
-    thread::spawn(score_server);
-
-    let listener = TcpListener::bind("0.0.0.0:32123").unwrap();
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                println!("new client!");
-                thread::spawn(|| handle_connection(stream));
-            }
-            Err(_) => {}
-        }
-    }
-}
-
-fn score_server() {
-    let listener = TcpListener::bind("0.0.0.0:12321").unwrap();
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                println!("new score client!");
-                thread::spawn(|| handle_connection_score(stream));
-            }
-            Err(_) => {}
-        }
-    }
-}
-
-fn handle_connection_score(mut stream: TcpStream) -> Result<(), Error> {
+pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Result<(), Error> {
     stream.set_nodelay(true).unwrap();
 
-    let conn = Connection::open("./scores.db").unwrap();
-    let mut stmt = conn
-        .prepare("SELECT name, score FROM scores ORDER BY score DESC LIMIT 10")
-        .unwrap();
+    let scores = get_high_scores();
 
-    let score_iter = stmt
-        .query_map(params![], |row| Ok((row.get(0)?, row.get(1)?)))
-        .unwrap();
-
-    let mut scores: Vec<(String, u32)> = Vec::new();
-    for score in score_iter {
-        scores.push(score.unwrap());
-    }
-
-    connection::send(&scores, &mut stream)
+    stream.send(&scores)
 }
 
-fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
+pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<(), Error> {
     stream.set_nodelay(true).unwrap();
 
-    let nickname: String = connection::receive(&mut stream)?;
+    let nickname: String = stream.receive()?;
     println!("{:?}", nickname);
 
     let mut grid = LocalGridentify::new(rand::thread_rng().gen::<u32>() as u64);
 
     loop {
-        connection::send(&grid.board(), &mut stream)?;
+        stream.send(&grid.board())?;
 
         if grid.is_game_over() {
-            return Ok(handle_high_score(&nickname, grid.score()));
+            return Ok(insert_high_score(&nickname, grid.score()));
         }
 
-        let action: Action = connection::receive(&mut stream)?;
+        let action: Action = stream.receive()?;
 
         if grid.validate_move(&action).is_err() {
             return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
@@ -94,13 +41,28 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), Error> {
     }
 }
 
-fn handle_high_score(name: &str, score: &u64) {
-    let conn = Connection::open("./scores.db").unwrap();
-    conn.execute(
-        "INSERT INTO scores (name, score) VALUES (?1, ?2)",
-        params![name, *score as u32],
-    )
-    .unwrap();
+pub(crate) fn web_socket_wrapper(
+    func: impl FnOnce(WebSocket<TcpStream>) -> Result<(), Error> + Copy + 'static,
+) -> impl FnOnce(TcpStream) -> Result<(), Error> + Copy + 'static {
+    move |stream: TcpStream| {
+        let web_socket = accept(stream).unwrap();
+        func(web_socket)
+    }
+}
 
-    println!("{:?} got {:?}", name, score);
+pub(crate) fn listen_port(
+    port: &str,
+    handler: impl FnOnce(TcpStream) -> Result<(), Error> + Send + 'static + Copy + Sync,
+) {
+    let listener = TcpListener::bind(port).unwrap();
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("new client!");
+                thread::spawn(move || handler(stream));
+            }
+            Err(_) => {}
+        }
+    }
 }

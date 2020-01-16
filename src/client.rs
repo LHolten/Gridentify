@@ -1,4 +1,4 @@
-use crate::connection;
+use crate::connection::JsonConnection;
 use crate::grid::{Action, Board, Gridentify};
 use std::net::TcpStream;
 
@@ -13,8 +13,8 @@ impl ClientGridentify {
         let mut stream = TcpStream::connect(host).unwrap();
         stream.set_nodelay(true).unwrap();
 
-        connection::send(&nickname, &mut stream).unwrap();
-        let board = connection::receive(&mut stream).unwrap();
+        stream.send(&nickname).unwrap();
+        let board = stream.receive().unwrap();
 
         Self {
             stream,
@@ -42,9 +42,9 @@ impl Gridentify for ClientGridentify {
     }
 
     fn make_move(&mut self, action: Action) {
-        connection::send(&action, &mut self.stream).unwrap();
+        self.stream.send(&action).unwrap();
 
-        self.board = connection::receive(&mut self.stream).unwrap();
+        self.board = self.stream.receive().unwrap();
 
         self.score += self.board[*action.last().unwrap()] as u64;
     }
@@ -54,5 +54,5 @@ pub fn get_scores(host: &str) -> Vec<(String, u32)> {
     let mut stream = TcpStream::connect(host).unwrap();
     stream.set_nodelay(true).unwrap();
 
-    connection::receive(&mut stream).unwrap()
+    stream.receive().unwrap()
 }
