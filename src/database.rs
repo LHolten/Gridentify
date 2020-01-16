@@ -13,11 +13,11 @@ pub(crate) fn create_database() {
     .unwrap();
 }
 
-pub(crate) fn insert_high_score(name: &str, score: &u64) {
+pub(crate) fn insert_high_score(name: &str, score: u64) {
     let conn = Connection::open("./scores.db").unwrap();
     conn.execute(
         "INSERT INTO scores (name, score) VALUES (?1, ?2)",
-        params![name, *score as u32],
+        params![name, score as u32],
     )
     .unwrap();
 

@@ -40,7 +40,7 @@ impl PyLocalGridentify {
 
     #[text_signature = "($self)"]
     fn valid_moves(&self) -> PyResult<Vec<Action>> {
-        Ok(self.rust.valid_moves())
+        Ok(self.rust.state.valid_moves())
     }
 
     #[text_signature = "($self, action)"]
@@ -50,22 +50,22 @@ impl PyLocalGridentify {
 
     #[text_signature = "($self)"]
     fn show_board(&self) -> PyResult<()> {
-        Ok(self.rust.show_board())
+        Ok(self.rust.state.show_board())
     }
 
     #[getter]
     fn board(&self) -> PyResult<Vec<u32>> {
-        Ok(self.rust.board().to_vec())
+        Ok(self.rust.state.board.to_vec())
     }
 
     #[getter]
     fn score(&self) -> PyResult<u64> {
-        Ok(*self.rust.score())
+        Ok(self.rust.state.score)
     }
 
     #[text_signature = "($self)"]
     fn get_neighbours_of(&self) -> PyResult<Vec<Vec<usize>>> {
-        Ok(self.rust.get_neighbours().to_vec())
+        Ok(self.rust.state.get_neighbours().to_vec())
     }
 }
 
@@ -82,7 +82,7 @@ impl PyClientGridentify {
 
     #[text_signature = "($self)"]
     fn valid_moves(&self) -> PyResult<Vec<Action>> {
-        Ok(self.rust.valid_moves())
+        Ok(self.rust.state.valid_moves())
     }
 
     #[text_signature = "($self, action)"]
@@ -92,22 +92,22 @@ impl PyClientGridentify {
 
     #[text_signature = "($self)"]
     fn show_board(&self) -> PyResult<()> {
-        Ok(self.rust.show_board())
+        Ok(self.rust.state.show_board())
     }
 
     #[getter]
     fn board(&self) -> PyResult<Vec<u32>> {
-        Ok(self.rust.board().to_vec())
+        Ok(self.rust.state.board.to_vec())
     }
 
     #[getter]
     fn score(&self) -> PyResult<u64> {
-        Ok(*self.rust.score())
+        Ok(self.rust.state.score)
     }
 
     #[text_signature = "($self)"]
     fn get_neighbours_of(&self) -> PyResult<Vec<Vec<usize>>> {
-        Ok(self.rust.get_neighbours().to_vec())
+        Ok(self.rust.state.get_neighbours().to_vec())
     }
 }
 

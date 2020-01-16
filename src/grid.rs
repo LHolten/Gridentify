@@ -10,15 +10,14 @@ pub enum ActionValidation {
     ValueConflict,
 }
 
-pub trait Gridentify {
-    fn board_mut(&mut self) -> &mut Board;
-    fn board(&self) -> &Board;
-    fn score_mut(&mut self) -> &mut u64;
-    fn score(&self) -> &u64;
+#[derive(Copy, Clone)]
+pub struct State {
+    pub(crate) board: Board,
+    pub(crate) score: u64,
+}
 
-    fn make_move(&mut self, action: Action);
-
-    fn valid_moves(&self) -> Vec<Action> {
+impl State {
+    pub(crate) fn valid_moves(&self) -> Vec<Action> {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
@@ -42,19 +41,16 @@ pub trait Gridentify {
         }
     }
 
-    fn validate_move(&self, action: &Action) -> Result<(), ActionValidation> {
+    pub(crate) fn validate_move(&self, action: &Action) -> Result<(), ActionValidation> {
         if action.len() < 2 {
             return Err(ActionValidation::TooShort);
         }
         let action_value = self
-            .board()
+            .board
             .get(action[0])
             .ok_or(ActionValidation::OutOfBoard)?;
         for tile in action[1..].iter() {
-            let value = self
-                .board()
-                .get(*tile)
-                .ok_or(ActionValidation::OutOfBoard)?;
+            let value = self.board.get(*tile).ok_or(ActionValidation::OutOfBoard)?;
             if value != action_value {
                 return Err(ActionValidation::ValueConflict);
             }
@@ -62,48 +58,52 @@ pub trait Gridentify {
         Ok(())
     }
 
-    fn get_neighbours(&self) -> [Vec<usize>; 25] {
+    pub(crate) fn get_neighbours(&self) -> [Vec<usize>; 25] {
         array_init::array_init(|i| {
-            let value = self.board()[i];
+            let value = self.board[i];
             let mut neighbours = Vec::new();
             let x = i % 5;
             let y = i / 5;
-            if x < 4 && self.board()[i + 1] == value {
+            if x < 4 && self.board[i + 1] == value {
                 neighbours.push(i + 1)
             }
-            if y < 4 && self.board()[i + 5] == value {
+            if y < 4 && self.board[i + 5] == value {
                 neighbours.push(i + 5)
             }
-            if x > 0 && self.board()[i - 1] == value {
+            if x > 0 && self.board[i - 1] == value {
                 neighbours.push(i - 1)
             }
-            if y > 0 && self.board()[i - 5] == value {
+            if y > 0 && self.board[i - 5] == value {
                 neighbours.push(i - 5)
             }
             neighbours
         })
     }
 
-    fn is_game_over(&self) -> bool {
-        for i in 0..self.board().len() {
-            let value = self.board()[i];
+    pub(crate) fn is_game_over(&self) -> bool {
+        for i in 0..self.board.len() {
+            let value = self.board[i];
             let x = i % 5;
             let y = i / 5;
-            if x < 4 && self.board()[i + 1] == value {
+            if x < 4 && self.board[i + 1] == value {
                 return false;
             }
-            if y < 4 && self.board()[i + 5] == value {
+            if y < 4 && self.board[i + 5] == value {
                 return false;
             }
         }
         true
     }
 
-    fn show_board(&self) {
+    pub(crate) fn show_board(&self) {
         for i in 0..5 {
-            println!("{:?}", &self.board()[i * 5..i * 5 + 5]);
+            println!("{:?}", &self.board[i * 5..i * 5 + 5]);
         }
     }
+}
+
+pub trait Gridentify {
+    fn make_move(&mut self, action: Action);
 }
 
 pub fn show_move(action: Action) {

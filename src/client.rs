@@ -1,11 +1,10 @@
 use crate::connection::JsonConnection;
-use crate::grid::{Action, Board, Gridentify};
+use crate::grid::{Action, Gridentify, State};
 use std::net::TcpStream;
 
 pub struct ClientGridentify {
     stream: TcpStream,
-    score: u64,
-    board: Board,
+    pub(crate) state: State,
 }
 
 impl ClientGridentify {
@@ -18,35 +17,18 @@ impl ClientGridentify {
 
         Self {
             stream,
-            score: 0,
-            board,
+            state: State { score: 0, board },
         }
     }
 }
 
 impl Gridentify for ClientGridentify {
-    fn board_mut(&mut self) -> &mut [u32; 25] {
-        &mut self.board
-    }
-
-    fn board(&self) -> &[u32; 25] {
-        &self.board
-    }
-
-    fn score_mut(&mut self) -> &mut u64 {
-        &mut self.score
-    }
-
-    fn score(&self) -> &u64 {
-        &self.score
-    }
-
     fn make_move(&mut self, action: Action) {
         self.stream.send(&action).unwrap();
 
-        self.board = self.stream.receive().unwrap();
+        self.state.board = self.stream.receive().unwrap();
 
-        self.score += self.board[*action.last().unwrap()] as u64;
+        self.state.score += self.state.board[*action.last().unwrap()] as u64;
     }
 }
 

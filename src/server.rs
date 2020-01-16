@@ -24,15 +24,15 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
     let mut grid = LocalGridentify::new(rand::thread_rng());
 
     loop {
-        stream.send(&grid.board())?;
+        stream.send(&grid.state.board)?;
 
-        if grid.is_game_over() {
-            return Ok(insert_high_score(&nickname, grid.score()));
+        if grid.state.is_game_over() {
+            return Ok(insert_high_score(&nickname, grid.state.score));
         }
 
         let action: Action = stream.receive()?;
 
-        if grid.validate_move(&action).is_err() {
+        if grid.state.validate_move(&action).is_err() {
             return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
         }
 
