@@ -1,18 +1,20 @@
-pub mod client;
-pub mod connection;
-pub mod grid;
-pub mod local;
+mod client;
+mod connection;
+mod grid;
+mod local;
+mod random;
 
 use crate::client::ClientGridentify;
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
+use crate::random::BadRandom;
 use pyo3::prelude::*;
 
 #[pyclass(name = Gridentify)]
 #[text_signature = "(cls, seed)"]
 #[derive(Copy, Clone)]
 struct PyLocalGridentify {
-    rust: LocalGridentify,
+    rust: LocalGridentify<BadRandom>,
 }
 
 #[pyclass(name = GridentifyClient)]

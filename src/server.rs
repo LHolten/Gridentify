@@ -2,7 +2,6 @@ use crate::connection::JsonConnection;
 use crate::database::{get_high_scores, insert_high_score};
 use crate::grid::{Action, Gridentify};
 use crate::local::LocalGridentify;
-use rand::Rng;
 use std::io::{Error, ErrorKind, Result};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -22,7 +21,7 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
     let nickname: String = stream.receive()?;
     println!("{:?}", nickname);
 
-    let mut grid = LocalGridentify::new(rand::thread_rng().gen::<u32>() as u64);
+    let mut grid = LocalGridentify::new(rand::thread_rng());
 
     loop {
         stream.send(&grid.board())?;

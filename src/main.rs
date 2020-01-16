@@ -6,6 +6,7 @@ mod connection;
 mod database;
 mod grid;
 mod local;
+mod random;
 mod server;
 
 fn main() {
