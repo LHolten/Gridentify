@@ -1,6 +1,6 @@
 pub type Action = Vec<usize>;
 
-pub fn show_action(action: Action) {
+pub fn show_action(action: &[usize]) {
     let mut board = [0; 25];
     for (order, tile) in action.iter().enumerate() {
         board[*tile] = order + 1;

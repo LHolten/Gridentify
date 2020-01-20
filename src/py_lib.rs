@@ -28,7 +28,7 @@ struct PyClientGridentify {
 #[pymethods]
 impl PyLocalGridentify {
     #[new]
-    fn new(obj: &PyRawObject, seed: u64) {
+    fn init(obj: &PyRawObject, seed: u64) {
         obj.init({
             Self {
                 rust: Local::new(seed),
@@ -43,17 +43,19 @@ impl PyLocalGridentify {
 
     #[text_signature = "($self)"]
     fn valid_moves(&self) -> PyResult<Vec<Action>> {
-        Ok(self.rust.state.valid_moves())
+        Ok(self.rust.state.valid_actions())
     }
 
     #[text_signature = "($self, action)"]
     fn make_move(&mut self, action: Action) -> PyResult<()> {
-        Ok(self.rust.make_move(action))
+        self.rust.make_move(action.as_slice());
+        Ok(())
     }
 
     #[text_signature = "($self)"]
     fn show_board(&self) -> PyResult<()> {
-        Ok(self.rust.state.show_board())
+        self.rust.state.show_board();
+        Ok(())
     }
 
     #[getter]
@@ -75,7 +77,7 @@ impl PyLocalGridentify {
 #[pymethods]
 impl PyClientGridentify {
     #[new]
-    fn new(obj: &PyRawObject, host: &str, nickname: &str) {
+    fn init(obj: &PyRawObject, host: &str, nickname: &str) {
         obj.init({
             Self {
                 rust: Client::new(host, nickname),
@@ -85,17 +87,19 @@ impl PyClientGridentify {
 
     #[text_signature = "($self)"]
     fn valid_moves(&self) -> PyResult<Vec<Action>> {
-        Ok(self.rust.state.valid_moves())
+        Ok(self.rust.state.valid_actions())
     }
 
     #[text_signature = "($self, action)"]
     fn make_move(&mut self, action: Action) -> PyResult<()> {
-        Ok(self.rust.make_move(action))
+        self.rust.make_move(action);
+        Ok(())
     }
 
     #[text_signature = "($self)"]
     fn show_board(&self) -> PyResult<()> {
-        Ok(self.rust.state.show_board())
+        self.rust.state.show_board();
+        Ok(())
     }
 
     #[getter]
@@ -119,7 +123,8 @@ pub fn gridentify(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "show_move")]
     #[text_signature = "(action)"]
     fn show_move(_py: Python, action: Action) -> PyResult<()> {
-        Ok(action::show_action(action))
+        action::show_action(action.as_slice());
+        Ok(())
     }
 
     #[pyfn(m, "server_scores")]

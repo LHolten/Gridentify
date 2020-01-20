@@ -1,4 +1,3 @@
-use crate::action::Action;
 use crate::random::Random;
 use crate::state::State;
 
@@ -19,7 +18,7 @@ impl<R: Random> Local<R> {
         }
     }
 
-    pub(crate) fn make_move(&mut self, action: Action) {
+    pub(crate) fn make_move(&mut self, action: &[usize]) {
         self.state.board[*action.last().unwrap()] *= action.len() as u32;
         for &tile in action[..action.len() - 1].iter() {
             self.state.board[tile] = self.random.new_num();

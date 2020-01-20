@@ -28,19 +28,20 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
         stream.send(&grid.state.board)?;
 
         if grid.state.is_game_over() {
-            return Ok(insert_high_score(HighScore {
+            insert_high_score(HighScore {
                 name: nickname,
                 score: grid.state.score,
-            }));
+            });
+            return Ok(());
         }
 
         let action: Action = stream.receive()?;
 
-        if grid.state.validate_move(&action).is_err() {
+        if grid.state.validate_action(action.as_slice()).is_err() {
             return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
         }
 
-        grid.make_move(action)
+        grid.make_move(action.as_slice())
     }
 }
 
@@ -48,10 +49,12 @@ pub(crate) fn web_socket_wrapper(
     func: impl FnOnce(WebSocket<TcpStream>) -> Result<()> + Copy + 'static,
 ) -> impl FnOnce(TcpStream) -> Result<()> + Copy + 'static {
     move |stream: TcpStream| {
-        let web_socket = accept(stream).or(Err(Error::new(
-            ErrorKind::ConnectionRefused,
-            "could not connect",
-        )))?;
+        let web_socket = accept(stream).or_else(|_| {
+            Err(Error::new(
+                ErrorKind::ConnectionRefused,
+                "could not connect",
+            ))
+        })?;
         func(web_socket)
     }
 }
@@ -63,12 +66,9 @@ pub(crate) fn listen_port(
     let listener = TcpListener::bind(port).unwrap();
 
     for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                println!("new Client!");
-                thread::spawn(move || handler(stream));
-            }
-            Err(_) => {}
+        if let Ok(stream) = stream {
+            println!("new Client!");
+            thread::spawn(move || handler(stream));
         }
     }
 }

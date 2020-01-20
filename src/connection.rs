@@ -13,7 +13,7 @@ impl JsonConnection for TcpStream {
     fn send<T: Serialize>(&mut self, data: &T) -> Result<()> {
         let mut vec_data = serde_json::to_vec(data).unwrap();
         vec_data.push(0);
-        self.write(vec_data.as_slice())?;
+        self.write_all(vec_data.as_slice())?;
         Ok(())
     }
 
@@ -21,7 +21,7 @@ impl JsonConnection for TcpStream {
         let mut data = Vec::new();
         BufReader::new(self).read_until(0, &mut data)?;
         data.pop()
-            .ok_or(Error::new(ErrorKind::InvalidData, "no message"))?;
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "no message"))?;
         Ok(serde_json::from_slice(data.as_slice())?)
     }
 
@@ -34,22 +34,25 @@ impl JsonConnection for WebSocket<TcpStream> {
     fn send<T: Serialize>(&mut self, data: &T) -> Result<()> {
         let string_data = serde_json::to_string(data).unwrap();
         self.write_message(Message::Text(string_data))
-            .or(Err(Error::new(
+            .or_else(|_| {
+                Err(Error::new(
+                    ErrorKind::Interrupted,
+                    "couldn\'t write message",
+                ))
+            })?;
+        self.write_pending().or_else(|_| {
+            Err(Error::new(
                 ErrorKind::Interrupted,
                 "couldn\'t write message",
-            )))?;
-        self.write_pending().or(Err(Error::new(
-            ErrorKind::Interrupted,
-            "couldn\'t write message",
-        )))?;
+            ))
+        })?;
         Ok(())
     }
 
     fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> Result<T> {
-        let message = self.read_message().or(Err(Error::new(
-            ErrorKind::Interrupted,
-            "couldn\'t read message",
-        )))?;
+        let message = self
+            .read_message()
+            .or_else(|_| Err(Error::new(ErrorKind::Interrupted, "couldn\'t read message")))?;
         if let Message::Text(value) = message {
             return Ok(serde_json::from_str(value.as_str())?);
         }

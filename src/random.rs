@@ -1,6 +1,6 @@
 use crate::state::Board;
 use rand::prelude::ThreadRng;
-use rand::RngCore;
+use rand::Rng;
 
 pub(crate) trait Random {
     fn new_board(&mut self) -> Board {
@@ -11,14 +11,14 @@ pub(crate) trait Random {
 
 impl Random for u64 {
     fn new_num(&mut self) -> u32 {
-        let e = (16807 * *self) % 1924421567;
-        *self = if e > 0 { e } else { e + 3229763266 };
+        let e = (16807 * *self) % 1_924_421_567;
+        *self = if e > 0 { e } else { e + 3_229_763_266 };
         ((e % 3) + 1) as u32
     }
 }
 
 impl Random for ThreadRng {
     fn new_num(&mut self) -> u32 {
-        (self.next_u32() % 3) + 1
+        self.gen_range(1, 4)
     }
 }

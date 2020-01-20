@@ -14,6 +14,14 @@ path = 'src\py_lib.rs'
 name = "gridentify"
 crate-type = ["cdylib"]
 
+[[bin]]
+path = 'src\bot.rs'
+name = "bot"
+
+[[bin]]
+path = 'src\main.rs'
+name = "server"
+
 [dependencies]
 array-init = "0.1.1"
 rand = "0.7.3"

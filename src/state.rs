@@ -16,20 +16,24 @@ pub struct State {
 }
 
 impl State {
-    pub(crate) fn valid_moves(&self) -> Vec<Action> {
+    pub(crate) fn valid_actions(&self) -> Vec<Action> {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
         for i in 0..25 {
-            Self::find_extensions(&mut moves, &neighbours_of, &vec![i])
+            Self::find_extensions(&mut moves, &neighbours_of, &[i])
         }
         moves
     }
 
-    fn find_extensions(moves: &mut Vec<Action>, neighbours_of: &[Vec<usize>; 25], action: &Action) {
+    fn find_extensions(
+        moves: &mut Vec<Action>,
+        neighbours_of: &[Vec<usize>; 25],
+        action: &[usize],
+    ) {
         for neighbour in neighbours_of[*action.last().unwrap()].iter() {
             if !action.contains(neighbour) {
-                let mut branch = action.clone();
+                let mut branch = action.to_owned();
 
                 branch.push(*neighbour);
 
@@ -40,7 +44,7 @@ impl State {
         }
     }
 
-    pub(crate) fn validate_move(&self, action: &Action) -> Result<(), ActionValidation> {
+    pub(crate) fn validate_action(&self, action: &[usize]) -> Result<(), ActionValidation> {
         if action.len() < 2 {
             return Err(ActionValidation::TooShort);
         }
