@@ -2,12 +2,14 @@ use crate::database::create_database;
 use crate::server::{handle_connection, handle_connection_score, listen_port, web_socket_wrapper};
 use std::thread;
 
+mod action;
 mod connection;
 mod database;
-mod grid;
+mod high_score;
 mod local;
 mod random;
 mod server;
+mod state;
 
 fn main() {
     create_database();

@@ -1,7 +1,8 @@
+use crate::action::Action;
 use crate::connection::JsonConnection;
-use crate::database::{get_high_scores, insert_high_score, Score};
-use crate::grid::{Action, Gridentify};
-use crate::local::LocalGridentify;
+use crate::database::{get_high_scores, insert_high_score};
+use crate::high_score::HighScore;
+use crate::local::Local;
 use std::io::{Error, ErrorKind, Result};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -21,13 +22,13 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
     let nickname: String = stream.receive()?;
     println!("{:?}", nickname);
 
-    let mut grid = LocalGridentify::new(rand::thread_rng());
+    let mut grid = Local::new(rand::thread_rng());
 
     loop {
         stream.send(&grid.state.board)?;
 
         if grid.state.is_game_over() {
-            return Ok(insert_high_score(Score {
+            return Ok(insert_high_score(HighScore {
                 name: nickname,
                 score: grid.state.score,
             }));
@@ -64,7 +65,7 @@ pub(crate) fn listen_port(
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                println!("new client!");
+                println!("new Client!");
                 thread::spawn(move || handler(stream));
             }
             Err(_) => {}

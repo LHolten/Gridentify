@@ -1,15 +1,16 @@
+use crate::action::Action;
 use crate::connection::JsonConnection;
-use crate::database::Score;
-use crate::grid::{Action, Gridentify, State};
+use crate::high_score::HighScore;
+use crate::state::State;
 use std::net::TcpStream;
 
-pub struct ClientGridentify {
+pub(crate) struct Client {
     stream: TcpStream,
     pub(crate) state: State,
 }
 
-impl ClientGridentify {
-    pub fn new(host: &str, nickname: &str) -> Self {
+impl Client {
+    pub(crate) fn new(host: &str, nickname: &str) -> Self {
         let mut stream = TcpStream::connect(host).unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -21,10 +22,8 @@ impl ClientGridentify {
             state: State { score: 0, board },
         }
     }
-}
 
-impl Gridentify for ClientGridentify {
-    fn make_move(&mut self, action: Action) {
+    pub(crate) fn make_move(&mut self, action: Action) {
         self.stream.send(&action).unwrap();
 
         self.state.board = self.stream.receive().unwrap();
@@ -33,7 +32,7 @@ impl Gridentify for ClientGridentify {
     }
 }
 
-pub fn get_scores(host: &str) -> Vec<Score> {
+pub(crate) fn get_scores(host: &str) -> Vec<HighScore> {
     let mut stream = TcpStream::connect(host).unwrap();
     stream.set_nodelay(true).unwrap();
 

@@ -1,4 +1,4 @@
-use crate::grid::Board;
+use crate::state::Board;
 use rand::prelude::ThreadRng;
 use rand::RngCore;
 

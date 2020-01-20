@@ -1,27 +1,28 @@
+mod action;
 mod client;
 mod connection;
-mod database;
-mod grid;
+mod high_score;
 mod local;
 mod random;
+mod state;
 
-use crate::client::ClientGridentify;
-use crate::database::Score;
-use crate::grid::{Action, Gridentify};
-use crate::local::LocalGridentify;
+use crate::action::Action;
+use crate::client::Client;
+use crate::high_score::HighScore;
+use crate::local::Local;
 use pyo3::prelude::*;
 
 #[pyclass(name = Gridentify)]
 #[text_signature = "(cls, seed)"]
 #[derive(Copy, Clone)]
 struct PyLocalGridentify {
-    rust: LocalGridentify<u64>,
+    rust: Local<u64>,
 }
 
 #[pyclass(name = GridentifyClient)]
 #[text_signature = "(cls, host, nickname)"]
 struct PyClientGridentify {
-    rust: ClientGridentify,
+    rust: Client,
 }
 
 #[pymethods]
@@ -30,7 +31,7 @@ impl PyLocalGridentify {
     fn new(obj: &PyRawObject, seed: u64) {
         obj.init({
             Self {
-                rust: LocalGridentify::new(seed),
+                rust: Local::new(seed),
             }
         });
     }
@@ -77,7 +78,7 @@ impl PyClientGridentify {
     fn new(obj: &PyRawObject, host: &str, nickname: &str) {
         obj.init({
             Self {
-                rust: ClientGridentify::new(host, nickname),
+                rust: Client::new(host, nickname),
             }
         });
     }
@@ -118,12 +119,12 @@ pub fn gridentify(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "show_move")]
     #[text_signature = "(action)"]
     fn show_move(_py: Python, action: Action) -> PyResult<()> {
-        Ok(grid::show_move(action))
+        Ok(action::show_action(action))
     }
 
     #[pyfn(m, "server_scores")]
     #[text_signature = "(action)"]
-    fn server_scores(_py: Python, host: &str) -> PyResult<Vec<Score>> {
+    fn server_scores(_py: Python, host: &str) -> PyResult<Vec<HighScore>> {
         Ok(client::get_scores(host))
     }
 

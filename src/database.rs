@@ -1,12 +1,5 @@
-use dict_derive::IntoPyObject;
+use crate::high_score::HighScore;
 use rusqlite::{params, Connection};
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, IntoPyObject)]
-pub struct Score {
-    pub(crate) name: String,
-    pub(crate) score: u32,
-}
 
 pub(crate) fn create_database() {
     let conn = Connection::open("scores.db").unwrap();
@@ -21,7 +14,7 @@ pub(crate) fn create_database() {
     .unwrap();
 }
 
-pub(crate) fn insert_high_score(score: Score) {
+pub(crate) fn insert_high_score(score: HighScore) {
     let conn = Connection::open("./scores.db").unwrap();
     conn.execute(
         "INSERT INTO scores (name, score) VALUES (?1, ?2)",
@@ -32,7 +25,7 @@ pub(crate) fn insert_high_score(score: Score) {
     println!("{:?} got {:?}", score.name, score.score);
 }
 
-pub(crate) fn get_high_scores() -> Vec<Score> {
+pub(crate) fn get_high_scores() -> Vec<HighScore> {
     let conn = Connection::open("./scores.db").unwrap();
     let mut stmt = conn
         .prepare("SELECT name, score FROM scores ORDER BY score DESC LIMIT 10")
@@ -40,14 +33,14 @@ pub(crate) fn get_high_scores() -> Vec<Score> {
 
     let score_iter = stmt
         .query_map(params![], |row| {
-            Ok(Score {
+            Ok(HighScore {
                 name: row.get(0)?,
                 score: row.get(1)?,
             })
         })
         .unwrap();
 
-    let mut scores: Vec<Score> = Vec::new();
+    let mut scores: Vec<HighScore> = Vec::new();
     for score in score_iter {
         scores.push(score.unwrap());
     }

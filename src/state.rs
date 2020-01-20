@@ -1,8 +1,7 @@
+use crate::action::Action;
 use array_init;
 
 pub type Board = [u32; 25];
-
-pub type Action = Vec<usize>;
 
 pub enum ActionValidation {
     TooShort,
@@ -99,19 +98,5 @@ impl State {
         for i in 0..5 {
             println!("{:?}", &self.board[i * 5..i * 5 + 5]);
         }
-    }
-}
-
-pub trait Gridentify {
-    fn make_move(&mut self, action: Action);
-}
-
-pub fn show_move(action: Action) {
-    let mut board = [0; 25];
-    for (order, tile) in action.iter().enumerate() {
-        board[*tile] = order + 1;
-    }
-    for i in 0..5 {
-        println!("{:?}", &board[i * 5..i * 5 + 5]);
     }
 }
