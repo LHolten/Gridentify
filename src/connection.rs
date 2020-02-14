@@ -1,3 +1,4 @@
+use native_tls::TlsStream;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Error, ErrorKind, Result, Write};
 use std::net::TcpStream;
@@ -30,7 +31,7 @@ impl JsonConnection for TcpStream {
     }
 }
 
-impl JsonConnection for WebSocket<TcpStream> {
+impl JsonConnection for WebSocket<TlsStream<TcpStream>> {
     fn send<T: Serialize>(&mut self, data: &T) -> Result<()> {
         let string_data = serde_json::to_string(data).unwrap();
         self.write_message(Message::Text(string_data))
@@ -60,6 +61,6 @@ impl JsonConnection for WebSocket<TcpStream> {
     }
 
     fn set_nodelay(&mut self, v: bool) -> Result<()> {
-        self.get_mut().set_nodelay(v)
+        self.get_mut().get_mut().set_nodelay(v)
     }
 }

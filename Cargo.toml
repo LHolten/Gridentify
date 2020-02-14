@@ -10,16 +10,16 @@ edition = "2018"
 lto = true
 
 [lib]
-path = 'src\py_lib.rs'
+path = 'src/py_lib.rs'
 name = "gridentify"
 crate-type = ["cdylib"]
 
 [[bin]]
-path = 'src\bot.rs'
+path = 'src/bot.rs'
 name = "bot"
 
 [[bin]]
-path = 'src\main.rs'
+path = 'src/main.rs'
 name = "server"
 
 [dependencies]
@@ -28,6 +28,7 @@ rand = "0.7.3"
 serde_json = "1.0.44"
 tungstenite = "0.9.2"
 dict_derive = "0.2.0"
+native-tls = "0.2.3"
 
 [dependencies.serde]
 version = "1.0.104"

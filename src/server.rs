@@ -3,8 +3,10 @@ use crate::connection::JsonConnection;
 use crate::database::{get_high_scores, insert_high_score};
 use crate::high_score::HighScore;
 use crate::local::Local;
+use native_tls::{TlsAcceptor, TlsStream};
 use std::io::{Error, ErrorKind, Result};
 use std::net::{TcpListener, TcpStream};
+use std::sync::Arc;
 use std::thread;
 use tungstenite::{accept, WebSocket};
 
@@ -46,9 +48,16 @@ pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> 
 }
 
 pub(crate) fn web_socket_wrapper(
-    func: impl FnOnce(WebSocket<TcpStream>) -> Result<()> + Copy + 'static,
-) -> impl FnOnce(TcpStream) -> Result<()> + Copy + 'static {
+    acceptor: Arc<TlsAcceptor>,
+    func: impl Fn(WebSocket<TlsStream<TcpStream>>) -> Result<()>,
+) -> impl Fn(TcpStream) -> Result<()> {
     move |stream: TcpStream| {
+        let stream = acceptor.accept(stream).or_else(|_| {
+            Err(Error::new(
+                ErrorKind::ConnectionRefused,
+                "could not connect",
+            ))
+        })?;
         let web_socket = accept(stream).or_else(|_| {
             Err(Error::new(
                 ErrorKind::ConnectionRefused,
@@ -61,14 +70,16 @@ pub(crate) fn web_socket_wrapper(
 
 pub(crate) fn listen_port(
     port: &str,
-    handler: impl FnOnce(TcpStream) -> Result<()> + Send + 'static + Copy + Sync,
+    handler: impl Fn(TcpStream) -> Result<()> + Send + Sync + 'static,
 ) {
     let listener = TcpListener::bind(port).unwrap();
+    let handler = Arc::new(handler);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
             println!("new Client!");
-            thread::spawn(move || handler(stream));
+            let handler_clone = handler.clone();
+            thread::spawn(move || handler_clone(stream));
         }
     }
 }
