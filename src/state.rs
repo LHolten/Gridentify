@@ -7,6 +7,8 @@ pub enum ActionValidation {
     TooShort,
     OutOfBoard,
     ValueConflict,
+    NotNextToEachOther,
+    AlreadyGotten,
 }
 
 #[derive(Copy, Clone)]
@@ -52,11 +54,23 @@ impl State {
             .board
             .get(action[0])
             .ok_or(ActionValidation::OutOfBoard)?;
-        for tile in action[1..].iter() {
-            let value = self.board.get(*tile).ok_or(ActionValidation::OutOfBoard)?;
+        let mut coords = [action[0]].to_vec();
+        for &tile in action[1..].iter() {
+            let value = self.board.get(tile).ok_or(ActionValidation::OutOfBoard)?;
             if value != action_value {
                 return Err(ActionValidation::ValueConflict);
             }
+            if coords.contains(&tile) {
+                return Err(ActionValidation::AlreadyGotten);
+            }
+            let x = tile % 5;
+            let y = tile / 5;
+            let prev_x = coords.last().unwrap().clone() % 5;
+            let prev_y = coords.last().unwrap().clone() / 5;
+            if prev_x.max(x) + prev_y.max(y) - prev_x.min(x) - prev_y.min(y) != 1 {
+                return Err(ActionValidation::NotNextToEachOther);
+            }
+            coords.push(tile);
         }
         Ok(())
     }

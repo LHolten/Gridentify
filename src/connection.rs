@@ -12,18 +12,16 @@ pub(crate) trait JsonConnection {
 
 impl JsonConnection for TcpStream {
     fn send<T: Serialize>(&mut self, data: &T) -> Result<()> {
-        let mut vec_data = serde_json::to_vec(data).unwrap();
-        vec_data.push(0);
-        self.write_all(vec_data.as_slice())?;
+        let mut msg = serde_json::to_string(data).unwrap();
+        msg.push('\n');
+        self.write_all(msg.as_bytes())?;
         Ok(())
     }
 
     fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> Result<T> {
-        let mut data = Vec::new();
-        BufReader::new(self).read_until(0, &mut data)?;
-        data.pop()
-            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "no message"))?;
-        Ok(serde_json::from_slice(data.as_slice())?)
+        let mut msg = String::new();
+        BufReader::new(self).read_line(&mut msg)?;
+        Ok(serde_json::from_str(msg.as_str())?)
     }
 
     fn set_nodelay(&mut self, v: bool) -> Result<()> {
