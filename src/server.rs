@@ -4,10 +4,12 @@ use crate::database::{get_high_scores, insert_high_score};
 use crate::high_score::HighScore;
 use crate::local::Local;
 use native_tls::{TlsAcceptor, TlsStream};
+use ratelimit_meter::algorithms::NonConformance;
+use ratelimit_meter::{KeyedRateLimiter, GCRA};
 use std::io::{Error, ErrorKind, Result};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::thread;
+use std::{thread, time};
 use tungstenite::{accept, WebSocket};
 
 pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Result<()> {
@@ -71,6 +73,7 @@ pub(crate) fn web_socket_wrapper(
 pub(crate) fn listen_port(
     port: &str,
     handler: impl Fn(TcpStream) -> Result<()> + Send + Sync + 'static,
+    rate_limiter: KeyedRateLimiter<SocketAddr, GCRA>,
 ) {
     let listener = TcpListener::bind(port).unwrap();
     let handler = Arc::new(handler);
@@ -78,8 +81,21 @@ pub(crate) fn listen_port(
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
             println!("new Client!");
+            let address = stream.peer_addr().unwrap();
+
             let handler_clone = handler.clone();
-            thread::spawn(move || handler_clone(stream));
+            let mut shared_limiter = rate_limiter.clone();
+            thread::spawn(move || {
+                while match shared_limiter.check(address) {
+                    Ok(()) => false,
+                    Err(failed) => {
+                        let jitter = time::Duration::from_millis(rand::random::<u64>() % 100);
+                        thread::sleep(failed.earliest_possible() - time::Instant::now() + jitter);
+                        true
+                    }
+                } {}
+                handler_clone(stream)
+            });
         }
     }
 }
