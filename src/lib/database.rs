@@ -1,4 +1,4 @@
-use crate::high_score::HighScore;
+use crate::lib::high_score::HighScore;
 use rusqlite::OpenFlags;
 use rusqlite::{params, Connection};
 

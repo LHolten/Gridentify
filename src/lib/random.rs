@@ -1,8 +1,8 @@
-use crate::state::Board;
+use crate::lib::state::Board;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 
-pub(crate) trait Random {
+pub trait Random {
     fn new_board(&mut self) -> Board {
         array_init::array_init(|_| self.new_num())
     }

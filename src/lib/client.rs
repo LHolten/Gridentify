@@ -1,7 +1,7 @@
-use crate::action::Action;
-use crate::connection::JsonConnection;
-use crate::high_score::HighScore;
-use crate::state::State;
+use crate::lib::action::Action;
+use crate::lib::connection::JsonConnection;
+use crate::lib::high_score::HighScore;
+use crate::lib::state::State;
 use std::net::TcpStream;
 
 pub(crate) struct Client {

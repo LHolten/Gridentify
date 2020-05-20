@@ -1,12 +1,9 @@
-use crate::action::Action;
-use crate::local::Local;
+use lib::action::Action;
+use lib::local::Local;
 use rand::Rng;
 use std::cmp::max;
 
-mod action;
-mod local;
-mod random;
-mod state;
+mod lib;
 
 const GOOD_VALUES: [u32; 17] = [
     1, 2, 3, 6, 12, 24, 48, 96, 192, 384, 768, 1536, 3072, 6144, 12288, 24578, 49152,

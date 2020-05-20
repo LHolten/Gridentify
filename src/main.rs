@@ -1,5 +1,5 @@
-use crate::database::create_database;
-use crate::server::{handle_connection, handle_connection_score, listen_port, web_socket_wrapper};
+use lib::database::create_database;
+use lib::server::{handle_connection, handle_connection_score, listen_port, web_socket_wrapper};
 use native_tls::{Identity, TlsAcceptor};
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
 use std::fs::File;
@@ -9,14 +9,7 @@ use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::thread;
 
-mod action;
-mod connection;
-mod database;
-mod high_score;
-mod local;
-mod random;
-mod server;
-mod state;
+mod lib;
 
 fn main() {
     create_database();

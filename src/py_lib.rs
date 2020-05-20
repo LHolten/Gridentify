@@ -1,16 +1,10 @@
-mod action;
-mod client;
-mod connection;
-mod high_score;
-mod local;
-mod random;
-mod state;
-
 use crate::action::Action;
 use crate::client::Client;
 use crate::high_score::HighScore;
 use crate::local::Local;
 use pyo3::prelude::*;
+
+mod lib;
 
 #[pyclass(name = Gridentify)]
 #[text_signature = "(cls, seed)"]

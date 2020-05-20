@@ -1,4 +1,4 @@
-use crate::action::Action;
+use crate::lib::action::Action;
 use array_init;
 
 pub type Board = [u32; 25];
@@ -13,12 +13,12 @@ pub enum ActionValidation {
 
 #[derive(Copy, Clone)]
 pub struct State {
-    pub(crate) board: Board,
-    pub(crate) score: u32,
+    pub board: Board,
+    pub score: u32,
 }
 
 impl State {
-    pub(crate) fn valid_actions(&self) -> Vec<Action> {
+    pub fn valid_actions(&self) -> Vec<Action> {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
@@ -112,7 +112,7 @@ impl State {
         true
     }
 
-    pub(crate) fn show_board(&self) {
+    pub fn show_board(&self) {
         for i in 0..5 {
             println!("{:?}", &self.board[i * 5..i * 5 + 5]);
         }

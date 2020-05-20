@@ -1,14 +1,14 @@
-use crate::random::Random;
-use crate::state::State;
+use crate::lib::random::Random;
+use crate::lib::state::State;
 
 #[derive(Copy, Clone)]
-pub(crate) struct Local<R: Random> {
+pub struct Local<R: Random> {
     random: R,
-    pub(crate) state: State,
+    pub state: State,
 }
 
 impl<R: Random> Local<R> {
-    pub(crate) fn new(mut random: R) -> Self {
+    pub fn new(mut random: R) -> Self {
         Self {
             state: State {
                 score: 0,
@@ -18,7 +18,7 @@ impl<R: Random> Local<R> {
         }
     }
 
-    pub(crate) fn make_move(&mut self, action: &[usize]) {
+    pub fn make_move(&mut self, action: &[usize]) {
         self.state.board[*action.last().unwrap()] *= action.len() as u32;
         for &tile in action[..action.len() - 1].iter() {
             self.state.board[tile] = self.random.new_num();
