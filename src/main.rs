@@ -4,7 +4,7 @@ use native_tls::{Identity, TlsAcceptor};
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
 use std::fs::File;
 use std::io::Read;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::thread;
@@ -30,13 +30,12 @@ fn main() {
     let wrapped_connection = web_socket_wrapper(acceptor.clone(), handle_connection);
     let wrapped_connection_score = web_socket_wrapper(acceptor, handle_connection_score);
 
-    let rate_limiter =
-        KeyedRateLimiter::<SocketAddr, GCRA>::per_second(NonZeroU32::new(1).unwrap());
+    let rate_limiter = KeyedRateLimiter::<IpAddr, GCRA>::per_second(NonZeroU32::new(1).unwrap());
     let shared_limiter = rate_limiter.clone();
-    thread::spawn(|| listen_port("0.0.0.0:32123", handle_connection, shared_limiter));
+    thread::spawn(move || listen_port("0.0.0.0:32123", handle_connection, shared_limiter));
     let shared_limiter = rate_limiter.clone();
-    thread::spawn(|| listen_port("0.0.0.0:12321", handle_connection_score, shared_limiter));
+    thread::spawn(move || listen_port("0.0.0.0:12321", handle_connection_score, shared_limiter));
     let shared_limiter = rate_limiter.clone();
-    thread::spawn(|| listen_port("0.0.0.0:21212", wrapped_connection, shared_limiter));
+    thread::spawn(move || listen_port("0.0.0.0:21212", wrapped_connection, shared_limiter));
     listen_port("0.0.0.0:12121", wrapped_connection_score, rate_limiter);
 }

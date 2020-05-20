@@ -1,4 +1,5 @@
 use crate::high_score::HighScore;
+use rusqlite::OpenFlags;
 use rusqlite::{params, Connection};
 
 pub(crate) fn create_database() {
@@ -15,7 +16,11 @@ pub(crate) fn create_database() {
 }
 
 pub(crate) fn insert_high_score(score: HighScore) {
-    let conn = Connection::open("./scores.db").unwrap();
+    let conn = Connection::open_with_flags(
+        "./scores.db",
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .unwrap();
     conn.execute(
         "INSERT INTO scores (name, score) VALUES (?1, ?2)",
         params![score.name, score.score as u32],
@@ -26,7 +31,11 @@ pub(crate) fn insert_high_score(score: HighScore) {
 }
 
 pub(crate) fn get_high_scores() -> Vec<HighScore> {
-    let conn = Connection::open("./scores.db").unwrap();
+    let conn = Connection::open_with_flags(
+        "./scores.db",
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .unwrap();
     let mut stmt = conn
         .prepare("SELECT name, score FROM scores ORDER BY score DESC LIMIT 10")
         .unwrap();

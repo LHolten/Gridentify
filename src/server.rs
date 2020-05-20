@@ -7,7 +7,7 @@ use native_tls::{TlsAcceptor, TlsStream};
 use ratelimit_meter::algorithms::NonConformance;
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
 use std::io::{Error, ErrorKind, Result};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::{thread, time};
 use tungstenite::{accept, WebSocket};
@@ -73,29 +73,33 @@ pub(crate) fn web_socket_wrapper(
 pub(crate) fn listen_port(
     port: &str,
     handler: impl Fn(TcpStream) -> Result<()> + Send + Sync + 'static,
-    rate_limiter: KeyedRateLimiter<SocketAddr, GCRA>,
+    rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
 ) {
     let listener = TcpListener::bind(port).unwrap();
     let handler = Arc::new(handler);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
-            println!("new Client!");
-            let address = stream.peer_addr().unwrap();
+            if let Ok(address) = stream.peer_addr() {
+                println!("new Client!");
 
-            let handler_clone = handler.clone();
-            let mut shared_limiter = rate_limiter.clone();
-            thread::spawn(move || {
-                while match shared_limiter.check(address) {
-                    Ok(()) => false,
-                    Err(failed) => {
-                        let jitter = time::Duration::from_millis(rand::random::<u64>() % 100);
-                        thread::sleep(failed.earliest_possible() - time::Instant::now() + jitter);
-                        true
-                    }
-                } {}
-                handler_clone(stream)
-            });
+                let address = address.ip();
+                let handler_clone = handler.clone();
+                let mut shared_limiter = rate_limiter.clone();
+                thread::spawn(move || {
+                    while match shared_limiter.check(address) {
+                        Ok(()) => false,
+                        Err(failed) => {
+                            let jitter = time::Duration::from_millis(rand::random::<u64>() % 100);
+                            thread::sleep(
+                                failed.earliest_possible() - time::Instant::now() + jitter,
+                            );
+                            true
+                        }
+                    } {}
+                    handler_clone(stream)
+                });
+            }
         }
     }
 }
