@@ -1,63 +1,57 @@
 use lib::action::Action;
 use lib::local::Local;
-use rand::Rng;
-use std::cmp::max;
+use lib::state::{Board, State};
+use std::cmp::Ordering::Equal;
+use std::collections::HashMap;
 
 mod lib;
-
-const GOOD_VALUES: [u32; 17] = [
-    1, 2, 3, 6, 12, 24, 48, 96, 192, 384, 768, 1536, 3072, 6144, 12288, 24578, 49152,
-];
 
 fn main() {
     let mut local = Local::new(123);
 
-    let mut actions = filtered_actions(&local);
-    while !actions.is_empty() {
-        let mut best = (Vec::new(), 0);
-
-        for action in actions {
-            let mut value = 0;
-            for _ in 0..1000 {
-                value = max(value, q(local, action.as_slice()));
-            }
-            if value > best.1 {
-                best = (action, value);
-            }
+    loop {
+        if let Some(action) = v(&local.state, 0).0 {
+            local.make_move(&action);
+            local.state.show_board();
+            println!("----------");
+            continue;
         }
-        local.make_move(best.0.as_slice());
-        local.state.show_board();
-
-        actions = filtered_actions(&local);
+        break;
     }
 
     println!("{:?}", local.state.score);
 }
 
-fn q(mut local: Local<u64>, action: &[usize]) -> u32 {
-    local.make_move(action);
-    v(local)
+fn v(state: &State, prob: usize) -> (Option<Action>, f32) {
+    let actions = state.valid_actions();
+    if prob >= 3 || actions.len() == 0 {
+        return (None, state.score as f32 / 3f32.powi(prob as i32));
+    }
+    let value = actions
+        .into_iter()
+        .map(|action| {
+            let new_prob = prob + action.len() - 1;
+            let states = state.next_states(&action);
+            let value: f32 = states.iter().map(|s| v(s, new_prob).1).sum();
+            (Some(action), value)
+        })
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Equal))
+        .unwrap();
+    value
 }
 
-fn v(local: Local<u64>) -> u32 {
-    let actions = filtered_actions(&local);
+const GOOD_VALUES: [u32; 17] = [
+    1, 2, 3, 6, 12, 24, 48, 96, 192, 384, 768, 1536, 3072, 6144, 12288, 24578, 49152,
+];
 
-    if actions.is_empty() {
-        return local.state.score;
-    }
-
-    let action = &actions[rand::thread_rng().gen_range(0, actions.len())];
-    q(local, action)
-}
-
-fn filtered_actions(local: &Local<u64>) -> Vec<Action> {
-    let actions = local.state.valid_actions();
-    let mut filtered = Vec::new();
-    for action in actions {
-        let result = local.state.board[action[0]] * action.len() as u32;
-        if GOOD_VALUES.contains(&result) {
-            filtered.push(action)
-        }
-    }
-    filtered
+fn filtered_actions(state: &State) -> Vec<Action> {
+    state
+        .valid_actions()
+        .into_iter()
+        .filter(|action| {
+            let result = state.board[action[0]] * action.len() as u32;
+            GOOD_VALUES.contains(&result)
+        })
+        .take(4)
+        .collect()
 }

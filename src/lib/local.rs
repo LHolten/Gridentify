@@ -1,7 +1,7 @@
 use crate::lib::random::Random;
 use crate::lib::state::State;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Local<R: Random> {
     random: R,
     pub state: State,

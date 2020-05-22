@@ -1,5 +1,6 @@
 use crate::lib::action::Action;
 use array_init;
+use rusqlite::version_number;
 
 pub type Board = [u32; 25];
 
@@ -11,7 +12,7 @@ pub enum ActionValidation {
     AlreadyGotten,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct State {
     pub board: Board,
     pub score: u32,
@@ -22,28 +23,32 @@ impl State {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
-        for i in 0..25 {
-            Self::find_extensions(&mut moves, &neighbours_of, &[i])
-        }
-        moves
-    }
+        fn find_extensions(
+            moves: &mut Vec<Action>,
+            neighbours_of: &[Vec<usize>; 25],
+            action: &[usize],
+            length: usize,
+        ) {
+            for neighbour in neighbours_of[*action.last().unwrap()].iter() {
+                if !action.contains(neighbour) {
+                    let mut branch = action.to_owned();
 
-    fn find_extensions(
-        moves: &mut Vec<Action>,
-        neighbours_of: &[Vec<usize>; 25],
-        action: &[usize],
-    ) {
-        for neighbour in neighbours_of[*action.last().unwrap()].iter() {
-            if !action.contains(neighbour) {
-                let mut branch = action.to_owned();
+                    branch.push(*neighbour);
 
-                branch.push(*neighbour);
+                    if branch.len() < length {
+                        find_extensions(moves, neighbours_of, &branch, length);
+                    }
 
-                Self::find_extensions(moves, neighbours_of, &branch);
-
-                moves.push(branch);
+                    moves.push(branch);
+                }
             }
         }
+
+        for i in 0..25 {
+            let length = if self.board[i] % 3 == 0 { 2 } else { 3 };
+            find_extensions(&mut moves, &neighbours_of, &[i], length)
+        }
+        moves
     }
 
     pub(crate) fn validate_action(&self, action: &[usize]) -> Result<(), ActionValidation> {
@@ -54,7 +59,7 @@ impl State {
             .board
             .get(action[0])
             .ok_or(ActionValidation::OutOfBoard)?;
-        let mut coords = [action[0]].to_vec();
+        let mut coords = vec![action[0]];
         for &tile in action[1..].iter() {
             let value = self.board.get(tile).ok_or(ActionValidation::OutOfBoard)?;
             if value != action_value {
@@ -116,5 +121,27 @@ impl State {
         for i in 0..5 {
             println!("{:?}", &self.board[i * 5..i * 5 + 5]);
         }
+    }
+
+    pub fn next_states(&self, action: &Action) -> Vec<State> {
+        let mut new_state = self.clone();
+        let &last_index = action.last().unwrap();
+        new_state.board[last_index] *= action.len() as u32;
+        new_state.score += new_state.board[last_index];
+
+        fn other_states(mut state: State, mut wildcards: &[usize]) -> Vec<State> {
+            if wildcards.len() == 0 {
+                return vec![state];
+            }
+            state.board[wildcards[0]] = 1;
+            let mut result = other_states(state.clone(), &wildcards[1..]);
+            state.board[wildcards[0]] = 2;
+            result.append(&mut other_states(state.clone(), &wildcards[1..]));
+            state.board[wildcards[0]] = 3;
+            result.append(&mut other_states(state, &wildcards[1..]));
+            result
+        }
+
+        other_states(new_state, &action[..action.len() - 1])
     }
 }
