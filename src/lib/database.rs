@@ -2,7 +2,7 @@ use crate::lib::high_score::HighScore;
 use rusqlite::OpenFlags;
 use rusqlite::{params, Connection};
 
-pub(crate) fn create_database() {
+pub fn create_database() {
     let conn = Connection::open("scores.db").unwrap();
     conn.execute(
         "CREATE TABLE IF NOT EXISTS scores (

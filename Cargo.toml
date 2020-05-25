@@ -31,6 +31,7 @@ dict_derive = "0.2.0"
 native-tls = "0.2.3"
 typenum = "1.11.2"
 ratelimit_meter = "5.0.0"
+simple-error = "0.2.1"
 
 [dependencies.serde]
 version = "1.0.104"

@@ -6,73 +6,78 @@ use crate::lib::local::Local;
 use native_tls::{TlsAcceptor, TlsStream};
 use ratelimit_meter::algorithms::NonConformance;
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
-use std::io::{Error, ErrorKind, Result};
-use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
+use simple_error::bail;
+use simple_error::SimpleResult;
+use std::net::{IpAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::{thread, time};
 use tungstenite::{accept, WebSocket};
 
-pub(crate) fn handle_connection_score<T: JsonConnection>(mut stream: T) -> Result<()> {
+#[allow(unused_must_use)]
+pub fn handle_connection_score<T: JsonConnection>(mut stream: T) {
     stream.set_nodelay(true).unwrap();
 
     let scores = get_high_scores();
 
-    stream.send(&scores)
+    stream.send(&scores);
 }
 
-pub(crate) fn handle_connection<T: JsonConnection>(mut stream: T) -> Result<()> {
-    stream.set_nodelay(true).unwrap();
+#[allow(unused_must_use)]
+pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
+    fn handle<T: JsonConnection>(stream: &mut T) -> SimpleResult<()> {
+        stream.set_nodelay(true).unwrap();
 
-    let nickname: String = stream.receive()?;
-    println!("{:?}", nickname);
-
-    let mut grid = Local::new(rand::thread_rng());
-
-    loop {
-        stream.send(&grid.state.board)?;
-
-        if grid.state.is_game_over() {
-            insert_high_score(HighScore {
-                name: nickname,
-                score: grid.state.score,
-            });
-            return Ok(());
+        let nickname: String = stream.receive()?;
+        println!("{:?}", nickname);
+        if nickname.len() > 16 {
+            bail!("nickname too long");
         }
 
-        let action: Action = stream.receive()?;
+        let mut grid = Local::new(rand::thread_rng());
 
-        if grid.state.validate_action(action.as_slice()).is_err() {
-            return Err(Error::new(ErrorKind::InvalidData, "wrong move"));
+        loop {
+            stream.send(&grid.state.board)?;
+
+            if grid.state.is_game_over() {
+                insert_high_score(HighScore {
+                    name: nickname,
+                    score: grid.state.score,
+                });
+                return Ok(());
+            }
+
+            let action: Action = stream.receive()?;
+
+            if grid.state.validate_action(action.as_slice()).is_err() {
+                bail!("wrong move");
+            }
+
+            grid.make_move(action.as_slice())
         }
+    }
 
-        grid.make_move(action.as_slice())
+    if let Err(error) = handle(&mut stream) {
+        // stream.send(&error.as_str());
+        println!("{}", &error.as_str())
     }
 }
 
-pub(crate) fn web_socket_wrapper(
+pub fn web_socket_wrapper(
     acceptor: Arc<TlsAcceptor>,
-    func: impl Fn(WebSocket<TlsStream<TcpStream>>) -> Result<()>,
-) -> impl Fn(TcpStream) -> Result<()> {
+    func: impl Fn(WebSocket<TlsStream<TcpStream>>),
+) -> impl Fn(TcpStream) {
     move |stream: TcpStream| {
-        let stream = acceptor.accept(stream).or_else(|_| {
-            Err(Error::new(
-                ErrorKind::ConnectionRefused,
-                "could not connect",
-            ))
-        })?;
-        let web_socket = accept(stream).or_else(|_| {
-            Err(Error::new(
-                ErrorKind::ConnectionRefused,
-                "could not connect",
-            ))
-        })?;
-        func(web_socket)
+        if let Ok(tls_stream) = acceptor.accept(stream) {
+            if let Ok(web_socket) = accept(tls_stream) {
+                func(web_socket)
+            }
+        }
     }
 }
 
-pub(crate) fn listen_port(
+pub fn listen_port(
     port: &str,
-    handler: impl Fn(TcpStream) -> Result<()> + Send + Sync + 'static,
+    handler: impl Fn(TcpStream) + Send + Sync + 'static,
     rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
 ) {
     let listener = TcpListener::bind(port).unwrap();

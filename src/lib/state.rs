@@ -1,6 +1,5 @@
 use crate::lib::action::Action;
 use array_init;
-use rusqlite::version_number;
 
 pub type Board = [u32; 25];
 
@@ -135,7 +134,7 @@ impl State {
         new_state.board[last_index] *= action.len() as u32;
         new_state.score += new_state.board[last_index];
 
-        fn other_states(mut state: State, mut wildcards: &[usize]) -> Vec<State> {
+        fn other_states(mut state: State, wildcards: &[usize]) -> Vec<State> {
             if wildcards.len() == 0 {
                 return vec![state];
             }
