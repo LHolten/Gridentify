@@ -13,25 +13,23 @@ use std::sync::Arc;
 use std::{thread, time};
 use tungstenite::{accept, WebSocket};
 
-#[allow(unused_must_use)]
 pub fn handle_connection_score<T: JsonConnection>(mut stream: T) {
     stream.set_nodelay(true).unwrap();
 
     let scores = get_high_scores();
 
-    stream.send(&scores);
+    let _ = stream.send(&scores);
 }
 
-#[allow(unused_must_use)]
 pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
     fn handle<T: JsonConnection>(stream: &mut T) -> SimpleResult<()> {
         stream.set_nodelay(true).unwrap();
 
         let nickname: String = stream.receive()?;
-        println!("{:?}", nickname);
         if nickname.len() > 16 {
-            bail!("nickname too long");
+            bail!(format!("nickname too long: {}", nickname).as_str());
         }
+        println!("playing: {}", nickname);
 
         let mut grid = Local::new(rand::thread_rng());
 
@@ -49,7 +47,7 @@ pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
             let action: Action = stream.receive()?;
 
             if grid.state.validate_action(action.as_slice()).is_err() {
-                bail!("wrong move");
+                bail!(format!("wrong move: {}", nickname).as_str());
             }
 
             grid.make_move(action.as_slice())
@@ -57,7 +55,7 @@ pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
     }
 
     if let Err(error) = handle(&mut stream) {
-        // stream.send(&error.as_str());
+        // let _ = stream.send(&error.as_str());
         println!("{}", &error.as_str())
     }
 }
@@ -102,7 +100,7 @@ pub fn listen_port(
                             true
                         }
                     } {}
-                    handler_clone(stream)
+                    handler_clone(stream);
                 });
             }
         }
