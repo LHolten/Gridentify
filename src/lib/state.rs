@@ -27,7 +27,9 @@ impl State {
             moves: &mut Vec<Action>,
             neighbours_of: &[Vec<usize>; 25],
             action: &[usize],
-            length: usize,
+            two: bool,
+            three: bool,
+            four: bool,
         ) {
             for neighbour in neighbours_of[*action.last().unwrap()].iter() {
                 if !action.contains(neighbour) {
@@ -35,18 +37,22 @@ impl State {
 
                     branch.push(*neighbour);
 
-                    if branch.len() < length {
-                        find_extensions(moves, neighbours_of, &branch, length);
+                    let len = branch.len();
+                    if four && len < 4 || three && len < 3 {
+                        find_extensions(moves, neighbours_of, &branch, two, three, four);
                     }
-
-                    moves.push(branch);
+                    if two && len == 2 || three && len == 3 || four && len == 4 {
+                        moves.push(branch);
+                    }
                 }
             }
         }
 
         for i in 0..25 {
-            let length = if self.board[i] % 3 == 0 { 2 } else { 3 };
-            find_extensions(&mut moves, &neighbours_of, &[i], length)
+            let three = self.board[i] % 3 != 0;
+            let four = self.board[i] % 3 == 0;
+            let two = four || self.board[i] < 4;
+            find_extensions(&mut moves, &neighbours_of, &[i], two, three, four)
         }
         moves
     }

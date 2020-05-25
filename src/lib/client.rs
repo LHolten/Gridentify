@@ -4,13 +4,13 @@ use crate::lib::high_score::HighScore;
 use crate::lib::state::State;
 use std::net::TcpStream;
 
-pub(crate) struct Client {
+pub struct Client {
     stream: TcpStream,
-    pub(crate) state: State,
+    pub state: State,
 }
 
 impl Client {
-    pub(crate) fn new(host: &str, nickname: &str) -> Self {
+    pub fn new(host: &str, nickname: &str) -> Self {
         let mut stream = TcpStream::connect(host).unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -23,7 +23,7 @@ impl Client {
         }
     }
 
-    pub(crate) fn make_move(&mut self, action: Action) {
+    pub fn make_move(&mut self, action: Action) {
         self.stream.send(&action).unwrap();
 
         self.state.board = self.stream.receive().unwrap();
