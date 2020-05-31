@@ -25,20 +25,20 @@ impl State {
         fn find_extensions(
             moves: &mut Vec<Action>,
             neighbours_of: &[Vec<usize>; 25],
-            action: &Vec<usize>,
+            action: Vec<usize>,
         ) {
             for neighbour in neighbours_of[*action.last().unwrap()].iter() {
                 if !action.contains(neighbour) {
                     let mut branch = action.clone();
                     branch.push(*neighbour);
-                    find_extensions(moves, neighbours_of, &branch);
-                    moves.push(branch);
+                    find_extensions(moves, neighbours_of, branch);
                 }
             }
+            moves.push(action);
         }
 
         for i in 0..25 {
-            find_extensions(&mut moves, &neighbours_of, &vec![i])
+            find_extensions(&mut moves, &neighbours_of, vec![i])
         }
         moves
     }
