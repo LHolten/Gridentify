@@ -1,6 +1,9 @@
 use lib::action::Action;
 use lib::client::Client;
 use lib::local::Local;
+use lib::lucid::ActionData;
+use lib::lucid::CreateActions;
+use lib::lucid::LucidState;
 use lib::state::{Board, State};
 use std::cmp::Ordering::Equal;
 use std::collections::HashMap;
@@ -11,21 +14,21 @@ mod lib;
 fn main() {
     let mut local = Local::new(123);
 
-    loop {
-        if let Some(action) = v(&local.state, 0).0 {
-            local.make_move(&action);
-            local.state.show_board();
-            println!("----------");
-            continue;
-        }
-        break;
+    let data = ActionData::create();
+    println!("created data with size {}", data.len());
+
+    while !local.state.is_game_over() {
+        let lucid = LucidState::create(&local.state, &data);
+        local.make_move(&lucid.best_action());
+        local.state.show_board();
+        println!("----------");
     }
 
     println!("{:?}", local.state.score);
 }
 
 fn v(state: &State, prob: usize) -> (Option<Action>, f32) {
-    let actions = state.valid_actions();
+    let actions = state.actions();
     if actions.len() == 0 {
         return (None, state.score as f32 / 3f32.powi(prob as i32));
     }

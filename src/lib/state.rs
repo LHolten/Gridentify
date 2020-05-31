@@ -18,40 +18,27 @@ pub struct State {
 }
 
 impl State {
-    pub fn valid_actions(&self) -> Vec<Action> {
+    pub fn actions(&self) -> Vec<Action> {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
         fn find_extensions(
             moves: &mut Vec<Action>,
             neighbours_of: &[Vec<usize>; 25],
-            action: &[usize],
-            two: bool,
-            three: bool,
-            four: bool,
+            action: &Vec<usize>,
         ) {
             for neighbour in neighbours_of[*action.last().unwrap()].iter() {
                 if !action.contains(neighbour) {
-                    let mut branch = action.to_owned();
-
+                    let mut branch = action.clone();
                     branch.push(*neighbour);
-
-                    let len = branch.len();
-                    if four && len < 4 || three && len < 3 {
-                        find_extensions(moves, neighbours_of, &branch, two, three, four);
-                    }
-                    if two && len == 2 || three && len == 3 || four && len == 4 {
-                        moves.push(branch);
-                    }
+                    find_extensions(moves, neighbours_of, &branch);
+                    moves.push(branch);
                 }
             }
         }
 
         for i in 0..25 {
-            let three = self.board[i] % 3 != 0;
-            let four = self.board[i] % 3 == 0;
-            let two = four || self.board[i] < 4;
-            find_extensions(&mut moves, &neighbours_of, &[i], two, three, four)
+            find_extensions(&mut moves, &neighbours_of, &vec![i])
         }
         moves
     }
@@ -88,26 +75,14 @@ impl State {
     pub(crate) fn get_neighbours(&self) -> [Vec<usize>; 25] {
         array_init::array_init(|i| {
             let value = self.board[i];
-            let mut neighbours = Vec::new();
-            let x = i % 5;
-            let y = i / 5;
-            if x < 4 && self.board[i + 1] == value {
-                neighbours.push(i + 1)
-            }
-            if y < 4 && self.board[i + 5] == value {
-                neighbours.push(i + 5)
-            }
-            if x > 0 && self.board[i - 1] == value {
-                neighbours.push(i - 1)
-            }
-            if y > 0 && self.board[i - 5] == value {
-                neighbours.push(i - 5)
-            }
-            neighbours
+            neighbours(i)
+                .into_iter()
+                .filter(|j| self.board[*j] == value)
+                .collect()
         })
     }
 
-    pub(crate) fn is_game_over(&self) -> bool {
+    pub fn is_game_over(&self) -> bool {
         for i in 0..self.board.len() {
             let value = self.board[i];
             let x = i % 5;
@@ -149,4 +124,23 @@ impl State {
 
         other_states(new_state, &action[..action.len() - 1])
     }
+}
+
+pub fn neighbours(index: usize) -> Vec<usize> {
+    let mut neighbours = Vec::new();
+    let x = index % 5;
+    let y = index / 5;
+    if x < 4 {
+        neighbours.push(index + 1)
+    }
+    if y < 4 {
+        neighbours.push(index + 5)
+    }
+    if x > 0 {
+        neighbours.push(index - 1)
+    }
+    if y > 0 {
+        neighbours.push(index - 5)
+    }
+    neighbours
 }
