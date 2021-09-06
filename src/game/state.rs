@@ -1,4 +1,3 @@
-use crate::lib::action::Action;
 use array_init;
 
 pub type Board = [u32; 25];
@@ -18,12 +17,12 @@ pub struct State {
 }
 
 impl State {
-    pub fn actions(&self) -> Vec<Action> {
+    pub fn actions(&self) -> Vec<Vec<usize>> {
         let neighbours_of = self.get_neighbours();
         let mut moves = Vec::new();
 
         fn find_extensions(
-            moves: &mut Vec<Action>,
+            moves: &mut Vec<Vec<usize>>,
             neighbours_of: &[Vec<usize>; 25],
             action: Vec<usize>,
         ) {
@@ -43,7 +42,7 @@ impl State {
         moves
     }
 
-    pub(crate) fn validate_action(&self, action: &[usize]) -> Result<(), ActionValidation> {
+    pub fn validate_action(&self, action: &[usize]) -> Result<(), ActionValidation> {
         if action.len() < 2 {
             return Err(ActionValidation::TooShort);
         }
@@ -103,7 +102,7 @@ impl State {
         }
     }
 
-    pub fn next_states(&self, action: &Action) -> Vec<State> {
+    pub fn next_states(&self, action: &[usize]) -> Vec<State> {
         let mut new_state = self.clone();
         let &last_index = action.last().unwrap();
         new_state.board[last_index] *= action.len() as u32;

@@ -17,10 +17,8 @@ impl JsonConnection for TcpStream {
     fn send<T: Serialize>(&mut self, data: &T) -> SimpleResult<()> {
         let mut msg = serde_json::to_string(data).unwrap();
         msg.push('\n');
-        Ok(try_with!(
-            self.write_all(msg.as_bytes()),
-            "couldn't write message"
-        ))
+        try_with!(self.write_all(msg.as_bytes()), "couldn't write message");
+        Ok(())
     }
 
     fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> SimpleResult<T> {
@@ -36,10 +34,8 @@ impl JsonConnection for TcpStream {
     }
 
     fn set_nodelay(&mut self, v: bool) -> SimpleResult<()> {
-        Ok(try_with!(
-            TcpStream::set_nodelay(&self, v),
-            "could not set no delay"
-        ))
+        try_with!(TcpStream::set_nodelay(self, v), "could not set no delay");
+        Ok(())
     }
 }
 
@@ -50,7 +46,8 @@ impl JsonConnection for WebSocket<TlsStream<TcpStream>> {
             self.write_message(Message::Text(string_data)),
             "couldn\'t write message"
         );
-        Ok(try_with!(self.write_pending(), "couldn\'t write message"))
+        try_with!(self.write_pending(), "couldn\'t write message");
+        Ok(())
     }
 
     fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> SimpleResult<T> {
@@ -65,9 +62,10 @@ impl JsonConnection for WebSocket<TlsStream<TcpStream>> {
     }
 
     fn set_nodelay(&mut self, v: bool) -> SimpleResult<()> {
-        Ok(try_with!(
+        try_with!(
             self.get_mut().get_mut().set_nodelay(v),
             "couldn't set no delay"
-        ))
+        );
+        Ok(())
     }
 }

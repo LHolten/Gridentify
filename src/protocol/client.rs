@@ -1,7 +1,6 @@
-use crate::lib::action::Action;
-use crate::lib::connection::JsonConnection;
-use crate::lib::database::HighScore;
-use crate::lib::state::State;
+use super::connection::JsonConnection;
+use super::high_score::HighScore;
+use crate::game::state::State;
 use std::net::TcpStream;
 
 pub struct Client {
@@ -23,7 +22,7 @@ impl Client {
         }
     }
 
-    pub fn make_move(&mut self, action: Action) {
+    pub fn make_move(&mut self, action: &[usize]) {
         self.stream.send(&action).unwrap();
 
         self.state.board = self.stream.receive().unwrap();
@@ -32,7 +31,7 @@ impl Client {
     }
 }
 
-pub(crate) fn get_scores(host: &str) -> Vec<HighScore> {
+pub fn get_scores(host: &str) -> Vec<HighScore> {
     let mut stream = TcpStream::connect(host).unwrap();
     stream.set_nodelay(true).unwrap();
 

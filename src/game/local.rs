@@ -1,5 +1,5 @@
-use crate::lib::random::Random;
-use crate::lib::state::State;
+use super::random::Random;
+use super::state::State;
 
 #[derive(Clone)]
 pub struct Local<R: Random> {

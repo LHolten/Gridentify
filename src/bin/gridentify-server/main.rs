@@ -1,17 +1,16 @@
-use lib::database::create_database;
-use lib::server::{
-    handle_connection_game, handle_connection_score, listen_port, web_socket_wrapper,
-};
+pub mod database;
+pub mod server;
+
+use database::create_database;
 use native_tls::{Identity, TlsAcceptor};
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
+use server::{handle_connection_game, handle_connection_score, listen_port, web_socket_wrapper};
 use std::fs::File;
 use std::io::Read;
 use std::net::IpAddr;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::thread;
-
-mod lib;
 
 fn main() {
     create_database();

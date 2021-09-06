@@ -1,4 +1,4 @@
-use crate::lib::state::Board;
+use super::state::Board;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 

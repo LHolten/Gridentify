@@ -1,15 +1,14 @@
-use crate::lib::action::Action;
-use crate::lib::connection::JsonConnection;
-use crate::lib::database::{get_high_scores, insert_high_score, HighScore};
-use crate::lib::local::Local;
+use crate::database::{get_high_scores, insert_high_score};
+use gridentify::game::local::Local;
+use gridentify::protocol::connection::JsonConnection;
+use gridentify::protocol::high_score::HighScore;
 use native_tls::{TlsAcceptor, TlsStream};
-use ratelimit_meter::algorithms::NonConformance;
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
 use simple_error::bail;
 use simple_error::SimpleResult;
 use std::net::{IpAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::{thread, time};
+use std::thread;
 use tungstenite::{accept, WebSocket};
 
 pub fn handle_connection_score<T: JsonConnection>(mut stream: T) {
@@ -43,7 +42,7 @@ pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
                 return Ok(());
             }
 
-            let action: Action = stream.receive()?;
+            let action: Vec<usize> = stream.receive()?;
 
             if grid.state.validate_action(action.as_slice()).is_err() {
                 bail!(format!("wrong move: {}", nickname).as_str());
@@ -75,30 +74,19 @@ pub fn web_socket_wrapper(
 pub fn listen_port(
     port: &str,
     handler: impl Fn(TcpStream) + Send + Sync + 'static,
-    rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
+    mut rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
 ) {
     let listener = TcpListener::bind(port).unwrap();
     let handler = Arc::new(handler);
 
-    for stream in listener.incoming() {
-        if let Ok(stream) = stream {
-            if let Ok(address) = stream.peer_addr() {
-                println!("new Client!");
+    for stream in listener.incoming().flatten() {
+        if let Ok(address) = stream.peer_addr() {
+            println!("new Client!");
 
-                let address = address.ip();
-                let handler_clone = handler.clone();
-                let mut shared_limiter = rate_limiter.clone();
+            let address = address.ip();
+            let handler_clone = handler.clone();
+            if let Ok(()) = rate_limiter.check(address) {
                 thread::spawn(move || {
-                    while match shared_limiter.check(address) {
-                        Ok(()) => false,
-                        Err(failed) => {
-                            let jitter = time::Duration::from_millis(rand::random::<u64>() % 100);
-                            thread::sleep(
-                                failed.earliest_possible() - time::Instant::now() + jitter,
-                            );
-                            true
-                        }
-                    } {}
                     handler_clone(stream);
                 });
             }
