@@ -62,8 +62,8 @@ impl State {
             }
             let x = tile % 5;
             let y = tile / 5;
-            let prev_x = coords.last().unwrap().clone() % 5;
-            let prev_y = coords.last().unwrap().clone() / 5;
+            let prev_x = *coords.last().unwrap() % 5;
+            let prev_y = *coords.last().unwrap() / 5;
             if prev_x.max(x) + prev_y.max(y) - prev_x.min(x) - prev_y.min(y) != 1 {
                 return Err(ActionValidation::NotNextToEachOther);
             }
@@ -110,7 +110,7 @@ impl State {
         new_state.score += new_state.board[last_index];
 
         fn other_states(mut state: State, wildcards: &[usize]) -> Vec<State> {
-            if wildcards.len() == 0 {
+            if wildcards.is_empty() {
                 return vec![state];
             }
             state.board[wildcards[0]] = 1;

@@ -1,6 +1,6 @@
-use crate::lib::high_score::HighScore;
 use rusqlite::OpenFlags;
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 
 pub fn create_database() {
     let conn = Connection::open("scores.db").unwrap();
@@ -54,4 +54,10 @@ pub(crate) fn get_high_scores() -> Vec<HighScore> {
         scores.push(score.unwrap());
     }
     scores
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct HighScore {
+    pub(crate) name: String,
+    pub(crate) score: u32,
 }

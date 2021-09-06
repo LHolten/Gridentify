@@ -1,7 +1,6 @@
 use crate::lib::action::Action;
 use crate::lib::connection::JsonConnection;
-use crate::lib::database::{get_high_scores, insert_high_score};
-use crate::lib::high_score::HighScore;
+use crate::lib::database::{get_high_scores, insert_high_score, HighScore};
 use crate::lib::local::Local;
 use native_tls::{TlsAcceptor, TlsStream};
 use ratelimit_meter::algorithms::NonConformance;

@@ -1,6 +1,6 @@
 use crate::lib::action::Action;
 use crate::lib::connection::JsonConnection;
-use crate::lib::high_score::HighScore;
+use crate::lib::database::HighScore;
 use crate::lib::state::State;
 use std::net::TcpStream;
 

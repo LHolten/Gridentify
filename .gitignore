@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+/py
+__pycache__
+*.pyd
+/.idea
