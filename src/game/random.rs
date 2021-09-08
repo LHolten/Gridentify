@@ -1,5 +1,5 @@
 use super::state::Board;
-use rand::prelude::ThreadRng;
+use rand::rngs::OsRng;
 use rand::Rng;
 
 pub trait Random {
@@ -17,7 +17,7 @@ impl Random for u64 {
     }
 }
 
-impl Random for ThreadRng {
+impl Random for OsRng {
     fn new_num(&mut self) -> u32 {
         self.gen_range(1, 4)
     }

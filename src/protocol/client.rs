@@ -8,32 +8,32 @@ pub struct Client {
     pub state: State,
 }
 
-impl Client {
-    pub fn new(host: &str, nickname: &str) -> Self {
-        let mut stream = TcpStream::connect(host).unwrap();
-        stream.set_nodelay(true).unwrap();
+// impl Client {
+//     pub async fn new(host: &str, nickname: &str) -> Self {
+//         let mut stream = TcpStream::connect(host).unwrap();
+//         stream.set_nodelay(true).unwrap();
 
-        stream.send(&nickname).unwrap();
-        let board = stream.receive().unwrap();
+//         stream.send_serialize(&nickname).await.unwrap();
+//         let board = stream.receive().unwrap();
 
-        Self {
-            stream,
-            state: State { score: 0, board },
-        }
-    }
+//         Self {
+//             stream,
+//             state: State { score: 0, board },
+//         }
+//     }
 
-    pub fn make_move(&mut self, action: &[usize]) {
-        self.stream.send(&action).unwrap();
+//     pub async fn make_move(&mut self, action: &[usize]) {
+//         self.stream.send_serialize(&action).await.unwrap();
 
-        self.state.board = self.stream.receive().unwrap();
+//         self.state.board = self.stream.receive().unwrap();
 
-        self.state.score += self.state.board[*action.last().unwrap()];
-    }
-}
+//         self.state.score += self.state.board[*action.last().unwrap()];
+//     }
+// }
 
-pub fn get_scores(host: &str) -> Vec<HighScore> {
-    let mut stream = TcpStream::connect(host).unwrap();
-    stream.set_nodelay(true).unwrap();
+// pub fn get_scores(host: &str) -> Vec<HighScore> {
+//     let mut stream = TcpStream::connect(host).unwrap();
+//     stream.set_nodelay(true).unwrap();
 
-    stream.receive().unwrap()
-}
+//     stream.receive().unwrap()
+// }

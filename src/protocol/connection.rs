@@ -1,71 +1,48 @@
-use native_tls::TlsStream;
+use async_tungstenite::tungstenite::Message;
+use async_tungstenite::WebSocketStream;
+use futures_util::sink::SinkExt;
+use futures_util::{Future, FutureExt, StreamExt};
+use rustls_acme::TlsStream;
 use serde::{Deserialize, Serialize};
-use simple_error::bail;
-use simple_error::try_with;
-use simple_error::SimpleResult;
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpStream;
-use tungstenite::{Message, WebSocket};
+use simple_error::{bail, try_with, SimpleError, SimpleResult};
 
 pub trait JsonConnection {
-    fn send<T: Serialize>(&mut self, data: &T) -> SimpleResult<()>;
-    fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> SimpleResult<T>;
-    fn set_nodelay(&mut self, v: bool) -> SimpleResult<()>;
+    type Send<'a>: 'a + Future<Output = SimpleResult<()>>;
+    fn send_serialize<'a, T: ?Sized + Serialize>(&'a mut self, data: &T) -> Self::Send<'a>;
+    type Receive<'a, T: 'a>: 'a + Future<Output = SimpleResult<T>>;
+    fn receive_deserialize<'b, T: for<'a> Deserialize<'a>>(&'b mut self) -> Self::Receive<'b, T>;
 }
 
-impl JsonConnection for TcpStream {
-    fn send<T: Serialize>(&mut self, data: &T) -> SimpleResult<()> {
-        let mut msg = serde_json::to_string(data).unwrap();
-        msg.push('\n');
-        try_with!(self.write_all(msg.as_bytes()), "couldn't write message");
-        Ok(())
-    }
-
-    fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> SimpleResult<T> {
-        let mut msg = String::new();
-        try_with!(
-            BufReader::new(self).read_line(&mut msg),
-            "couldn't read line from connection"
-        );
-        Ok(try_with!(
-            serde_json::from_str(msg.as_str()),
-            "not well formatted json"
-        ))
-    }
-
-    fn set_nodelay(&mut self, v: bool) -> SimpleResult<()> {
-        try_with!(TcpStream::set_nodelay(self, v), "could not set no delay");
-        Ok(())
-    }
+fn as_simple<O, T: std::error::Error>(result: Result<O, T>) -> SimpleResult<O> {
+    result.map_err(SimpleError::from)
 }
 
-impl JsonConnection for WebSocket<TlsStream<TcpStream>> {
-    fn send<T: Serialize>(&mut self, data: &T) -> SimpleResult<()> {
+fn websocket_send(
+    ws: &mut WebSocketStream<TlsStream>,
+    string_data: String,
+) -> impl '_ + Future<Output = SimpleResult<()>> {
+    ws.send(Message::Text(string_data)).map(as_simple)
+}
+
+impl JsonConnection for WebSocketStream<TlsStream> {
+    type Send<'a> = impl 'a + Future<Output = SimpleResult<()>>;
+
+    fn send_serialize<'a, J: ?Sized + Serialize>(&'a mut self, data: &J) -> Self::Send<'a> {
         let string_data = serde_json::to_string(data).unwrap();
-        try_with!(
-            self.write_message(Message::Text(string_data)),
-            "couldn\'t write message"
-        );
-        try_with!(self.write_pending(), "couldn\'t write message");
-        Ok(())
+        websocket_send(self, string_data)
     }
 
-    fn receive<T: for<'a> Deserialize<'a>>(&mut self) -> SimpleResult<T> {
-        let message = try_with!(self.read_message(), "couldn\'t read websocket message");
-        if let Message::Text(value) = message {
-            return Ok(try_with!(
-                serde_json::from_str(value.as_str()),
-                "not well formatted json"
-            ));
+    type Receive<'a, T: 'a> = impl 'a + Future<Output = SimpleResult<T>>;
+
+    fn receive_deserialize<'b, T: for<'a> Deserialize<'a>>(&'b mut self) -> Self::Receive<'b, T> {
+        async move {
+            if let Some(message) = self.next().await {
+                let message = try_with!(message, "couldn\'t read websocket message");
+                let text = try_with!(message.into_text(), "message is not text");
+                serde_json::from_str(&text).map_err(SimpleError::from)
+            } else {
+                bail!("no message")
+            }
         }
-        bail!("got non string message")
-    }
-
-    fn set_nodelay(&mut self, v: bool) -> SimpleResult<()> {
-        try_with!(
-            self.get_mut().get_mut().set_nodelay(v),
-            "couldn't set no delay"
-        );
-        Ok(())
     }
 }

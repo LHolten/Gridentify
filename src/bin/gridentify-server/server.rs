@@ -1,38 +1,39 @@
 use crate::database::{get_high_scores, insert_high_score};
+use async_std::net::TcpListener;
+use async_std::net::TcpStream;
+use async_std::task::spawn;
+use async_tungstenite::accept_async;
+use async_tungstenite::WebSocketStream;
+use futures_util::Future;
 use gridentify::game::local::Local;
 use gridentify::protocol::connection::JsonConnection;
 use gridentify::protocol::high_score::HighScore;
-use native_tls::{TlsAcceptor, TlsStream};
+use rand::rngs::OsRng;
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
+use rustls_acme::TlsAcceptor;
+use rustls_acme::TlsStream;
 use simple_error::bail;
 use simple_error::SimpleResult;
-use std::net::{IpAddr, TcpListener, TcpStream};
-use std::sync::Arc;
-use std::thread;
-use tungstenite::{accept, WebSocket};
+use std::net::IpAddr;
 
-pub fn handle_connection_score<T: JsonConnection>(mut stream: T) {
-    stream.set_nodelay(true).unwrap();
-
+pub async fn handle_connection_score<T: JsonConnection>(mut stream: T) {
     let scores = get_high_scores();
 
-    let _ = stream.send(&scores);
+    let _ = stream.send_serialize(&scores).await;
 }
 
-pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
-    fn handle<T: JsonConnection>(stream: &mut T) -> SimpleResult<()> {
-        stream.set_nodelay(true).unwrap();
-
-        let nickname: String = stream.receive()?;
+pub async fn handle_connection_game<T: JsonConnection>(mut stream: T) {
+    async fn handle<T: JsonConnection>(stream: &mut T) -> SimpleResult<()> {
+        let nickname: String = stream.receive_deserialize().await?;
         if nickname.len() > 16 {
             bail!(format!("nickname too long: {}", nickname).as_str());
         }
         println!("playing: {}", nickname);
 
-        let mut grid = Local::new(rand::thread_rng());
+        let mut grid = Local::new(OsRng);
 
         loop {
-            stream.send(&grid.state.board)?;
+            stream.send_serialize(&grid.state.board).await?;
 
             if grid.state.is_game_over() {
                 insert_high_score(HighScore {
@@ -42,7 +43,7 @@ pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
                 return Ok(());
             }
 
-            let action: Vec<usize> = stream.receive()?;
+            let action: Vec<usize> = stream.receive_deserialize().await?;
 
             if grid.state.validate_action(action.as_slice()).is_err() {
                 bail!(format!("wrong move: {}", nickname).as_str());
@@ -52,43 +53,37 @@ pub fn handle_connection_game<T: JsonConnection>(mut stream: T) {
         }
     }
 
-    if let Err(error) = handle(&mut stream) {
+    if let Err(error) = handle(&mut stream).await {
         // let _ = stream.send(&error.as_str());
         println!("{}", &error.as_str())
     }
 }
 
-pub fn web_socket_wrapper(
-    acceptor: Arc<TlsAcceptor>,
-    func: impl Fn(WebSocket<TlsStream<TcpStream>>),
-) -> impl Fn(TcpStream) {
-    move |stream: TcpStream| {
-        if let Ok(tls_stream) = acceptor.accept(stream) {
-            if let Ok(web_socket) = accept(tls_stream) {
-                func(web_socket)
-            }
+pub async fn web_socket_wrapper<F: 'static + Send + Future<Output = ()>>(
+    acceptor: TlsAcceptor,
+    handler: impl 'static + Send + Sync + Copy + Fn(WebSocketStream<TlsStream>) -> F,
+    stream: TcpStream,
+) {
+    if let Ok(Some(tls)) = acceptor.accept(stream).await {
+        if let Ok(socket) = accept_async(tls).await {
+            handler(socket).await
         }
     }
 }
 
-pub fn listen_port(
-    port: &str,
-    handler: impl Fn(TcpStream) + Send + Sync + 'static,
+pub async fn listen_port<F: 'static + Send + Future<Output = ()>>(
+    acceptor: TlsAcceptor,
+    address: &str,
+    handler: fn(WebSocketStream<TlsStream>) -> F,
     mut rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
 ) {
-    let listener = TcpListener::bind(port).unwrap();
-    let handler = Arc::new(handler);
+    let listener = TcpListener::bind(address).await.unwrap();
 
-    for stream in listener.incoming().flatten() {
-        if let Ok(address) = stream.peer_addr() {
-            println!("new Client!");
-
-            let address = address.ip();
-            let handler_clone = handler.clone();
-            if let Ok(()) = rate_limiter.check(address) {
-                thread::spawn(move || {
-                    handler_clone(stream);
-                });
+    loop {
+        if let Ok((stream, address)) = listener.accept().await {
+            if rate_limiter.check(address.ip()).is_ok() {
+                let _ = stream.set_nodelay(true);
+                let _ = spawn(web_socket_wrapper(acceptor.clone(), handler, stream));
             }
         }
     }
