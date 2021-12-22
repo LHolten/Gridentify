@@ -10,23 +10,25 @@ edition = "2018"
 lto = true
 
 [dependencies]
-array-init = "0.1.1"
-rand = "0.7.3"
-serde_json = "1.0.44"
-async-tungstenite = "0.14.0"
-ratelimit_meter = "5.0.0"
-simple-error = "0.2.1"
-async-std = "1.8"
-async-rustls = "0.2.0"
-futures-util = "0.3.17"
-rustls-acme = "0.1.7"
-simple_logger = "1.13.0"
-log = "0.4.14"
+tokio-tungstenite = "0.16"
+tokio = { version = "1.15", features = ["time", "net", "rt", "macros"] }
+tokio-rustls = "0.23"
+futures-util = "0.3"
+rustls-pemfile = "0.2"
+
+array-init = "0.1"
+rand = "0.7"
+serde_json = "1.0"
+ratelimit_meter = "5.0"
+simple-error = "0.2"
+simple_logger = "1.13"
+log = "0.4"
+arc-cell = "0.1"
 
 [dependencies.serde]
-version = "1.0.104"
+version = "1.0"
 features = ["derive"]
 
 [dependencies.rusqlite]
-version = "0.21.0"
+version = "0.21"
 features = ["bundled"]

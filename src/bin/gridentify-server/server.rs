@@ -1,39 +1,39 @@
 use crate::database::{get_high_scores, insert_high_score};
-use async_std::net::TcpListener;
-use async_std::net::TcpStream;
-use async_std::task::spawn;
-use async_tungstenite::accept_async;
-use async_tungstenite::WebSocketStream;
+use arc_cell::ArcCell;
 use futures_util::Future;
 use gridentify::game::local::Local;
-use gridentify::protocol::connection::JsonConnection;
+use gridentify::protocol::connection::{receive_deserialize, send_serialize, MyStream};
 use gridentify::protocol::high_score::HighScore;
+use log::{log, Level};
 use rand::rngs::OsRng;
 use ratelimit_meter::{KeyedRateLimiter, GCRA};
-use rustls_acme::TlsAcceptor;
-use rustls_acme::TlsStream;
 use simple_error::bail;
 use simple_error::SimpleResult;
 use std::net::IpAddr;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::spawn;
+use tokio_rustls::rustls::ServerConfig;
+use tokio_rustls::TlsAcceptor;
+use tokio_tungstenite::accept_async;
 
-pub async fn handle_connection_score<T: JsonConnection>(mut stream: T) {
+pub async fn handle_connection_score(mut stream: MyStream) {
     let scores = get_high_scores();
 
-    let _ = stream.send_serialize(&scores).await;
+    let _ = send_serialize(&mut stream, &scores).await;
 }
 
-pub async fn handle_connection_game<T: JsonConnection>(mut stream: T) {
-    async fn handle<T: JsonConnection>(stream: &mut T) -> SimpleResult<()> {
-        let nickname: String = stream.receive_deserialize().await?;
+pub async fn handle_connection_game(mut stream: MyStream) {
+    async fn handle(stream: &mut MyStream) -> SimpleResult<()> {
+        let nickname: String = receive_deserialize(stream).await?;
         if nickname.len() > 16 {
             bail!(format!("nickname too long: {}", nickname).as_str());
         }
-        println!("playing: {}", nickname);
+        log!(Level::Warn, "playing: {}", nickname);
 
         let mut grid = Local::new(OsRng);
 
         loop {
-            stream.send_serialize(&grid.state.board).await?;
+            send_serialize(stream, &grid.state.board).await?;
 
             if grid.state.is_game_over() {
                 insert_high_score(HighScore {
@@ -43,7 +43,7 @@ pub async fn handle_connection_game<T: JsonConnection>(mut stream: T) {
                 return Ok(());
             }
 
-            let action: Vec<usize> = stream.receive_deserialize().await?;
+            let action: Vec<usize> = receive_deserialize(stream).await?;
 
             if grid.state.validate_action(action.as_slice()).is_err() {
                 bail!(format!("wrong move: {}", nickname).as_str());
@@ -54,36 +54,45 @@ pub async fn handle_connection_game<T: JsonConnection>(mut stream: T) {
     }
 
     if let Err(error) = handle(&mut stream).await {
-        // let _ = stream.send(&error.as_str());
-        println!("{}", &error.as_str())
+        log!(Level::Warn, "{}", &error.as_str());
+        let _ = send_serialize(&mut stream, &error.as_str()).await;
     }
 }
 
 pub async fn web_socket_wrapper<F: 'static + Send + Future<Output = ()>>(
     acceptor: TlsAcceptor,
-    handler: impl 'static + Send + Sync + Copy + Fn(WebSocketStream<TlsStream>) -> F,
+    handler: impl 'static + Send + Sync + Copy + Fn(MyStream) -> F,
     stream: TcpStream,
 ) {
-    if let Ok(Some(tls)) = acceptor.accept(stream).await {
+    if let Ok(tls) = acceptor.accept(stream).await {
         if let Ok(socket) = accept_async(tls).await {
-            handler(socket).await
+            handler(socket).await;
+            log!(Level::Info, "dropping client")
+        } else {
+            log!(Level::Warn, "failed websocket handshake")
         }
+    } else {
+        log!(Level::Warn, "failed tls handshake")
     }
 }
 
 pub async fn listen_port<F: 'static + Send + Future<Output = ()>>(
-    acceptor: TlsAcceptor,
+    config: &ArcCell<ServerConfig>,
     address: &str,
-    handler: fn(WebSocketStream<TlsStream>) -> F,
+    handler: fn(MyStream) -> F,
     mut rate_limiter: KeyedRateLimiter<IpAddr, GCRA>,
 ) {
     let listener = TcpListener::bind(address).await.unwrap();
+    log!(Level::Info, "listening on address {}", address);
 
     loop {
         if let Ok((stream, address)) = listener.accept().await {
             if rate_limiter.check(address.ip()).is_ok() {
+                log!(Level::Info, "new client with address {}", address.ip());
                 let _ = stream.set_nodelay(true);
-                let _ = spawn(web_socket_wrapper(acceptor.clone(), handler, stream));
+                let _ = spawn(web_socket_wrapper(config.get().into(), handler, stream));
+            } else {
+                log!(Level::Warn, "client got ratelimited {}", address.ip())
             }
         }
     }
