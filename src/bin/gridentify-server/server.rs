@@ -17,9 +17,13 @@ use tokio_rustls::TlsAcceptor;
 use tokio_tungstenite::accept_async;
 
 pub async fn handle_connection_score(mut stream: MyStream) {
-    let scores = get_high_scores();
+    let scores = get_high_scores(false);
 
     let _ = send_serialize(&mut stream, &scores).await;
+
+    let daily_scores = get_high_scores(true);
+
+    let _ = send_serialize(&mut stream, &daily_scores).await;
 }
 
 pub async fn handle_connection_game(mut stream: MyStream) {
