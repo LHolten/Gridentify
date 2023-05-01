@@ -48,7 +48,7 @@ pub(crate) fn get_high_scores(daily: bool) -> Vec<HighScore> {
     let sql = if daily {
         "SELECT name, score 
             FROM scores 
-            WHERE unixepoch('-1 day') < unixepoch(timestamp) 
+            WHERE unixepoch('now', '-1 day') < unixepoch(timestamp) 
             ORDER BY score 
             DESC LIMIT 10"
     } else {
@@ -77,11 +77,18 @@ pub(crate) fn get_high_scores(daily: bool) -> Vec<HighScore> {
 
 #[cfg(test)]
 mod tests {
-    use super::{create_database, get_high_scores};
+    use gridentify::protocol::high_score::HighScore;
+
+    use super::{create_database, get_high_scores, insert_high_score};
 
     #[test]
     fn get_scores() {
         create_database();
-        get_high_scores(true);
+        insert_high_score(HighScore {
+            name: "test".to_owned(),
+            score: 42,
+        });
+        let l = get_high_scores(true);
+        assert!(!l.is_empty());
     }
 }
